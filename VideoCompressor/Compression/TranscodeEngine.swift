@@ -164,7 +164,7 @@ struct TranscodeEngine {
             throw AppError.userCancelled
         }
 
-        await writer.finishWriting()
+        writer.finishWriting()
         if writer.status != .completed {
             try? FileManager.default.removeItem(at: outputURL)
             throw AppError.compressionFailed(writer.error?.localizedDescription ?? "写入失败")

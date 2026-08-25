@@ -6,7 +6,7 @@ options:
   createIntermediateGroups: true
 settings:
   base:
-    SWIFT_VERSION: "5.0"
+    SWIFT_VERSION: "5.10"
     TARGETED_DEVICE_FAMILY: "1"
     ENABLE_BITCODE: "NO"
     IPHONEOS_DEPLOYMENT_TARGET: "16.0"
@@ -51,6 +51,6 @@ targets:
         SUPPORTED_PLATFORMS: "iphonesimulator iphoneos"
         IPHONEOS_DEPLOYMENT_TARGET: "16.0"
         GENERATE_INFOPLIST_FILE: "NO"
-        SWIFT_VERSION: "5.0"
+        SWIFT_VERSION: "5.10"
     dependencies:
       - target: VideoCompressor
