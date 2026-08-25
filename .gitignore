@@ -1,0 +1,17 @@
+# Xcode / 构建产物
+build/
+DerivedData/
+*.ipa
+VideoCompressor.xcodeproj/
+VideoCompressor.xcworkspace/
+*.xcuserdata/
+xcuserdata/
+
+# OS
+.DS_Store
+
+# 敏感文件（绝不提交）
+*.p12
+*.mobileprovision
+*.cer
+*.key

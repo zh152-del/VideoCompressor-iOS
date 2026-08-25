@@ -1,0 +1,56 @@
+name: VideoCompressor
+options:
+  bundleIdPrefix: com.videocompressor
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    TARGETED_DEVICE_FAMILY: "1"
+    ENABLE_BITCODE: "NO"
+    IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+targets:
+  VideoCompressor:
+    type: application
+    platform: iOS
+    sources:
+      - path: VideoCompressor
+        excludes:
+          - "Resources/Info.plist"
+          - "Resources/VideoCompressor.entitlements"
+    info:
+      path: VideoCompressor/Resources/Info.plist
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.videocompressor.VideoCompressor
+        PRODUCT_NAME: VideoCompressor
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        CODE_SIGN_ENTITLEMENTS: VideoCompressor/Resources/VideoCompressor.entitlements
+        CODE_SIGNING_ALLOWED: "NO"
+        DEVELOPMENT_TEAM: ""
+        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: "1"
+        GENERATE_INFOPLIST_FILE: "NO"
+    dependencies: []
+  VideoCompressorTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: VideoCompressorTests
+    info:
+      path: VideoCompressorTests/Info.plist
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.videocompressor.VideoCompressorTests
+        PRODUCT_NAME: VideoCompressorTests
+        CODE_SIGNING_ALLOWED: "NO"
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/VideoCompressor.app/VideoCompressor"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+        SUPPORTED_PLATFORMS: "iphonesimulator iphoneos"
+        IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+        GENERATE_INFOPLIST_FILE: "NO"
+        SWIFT_VERSION: "5.0"
+    dependencies:
+      - target: VideoCompressor
