@@ -69,7 +69,7 @@ struct TranscodeEngine {
         let videoInput = AVAssetWriterInput(
             mediaType: .video,
             outputSettings: videoSettings,
-            sourceFormatHint: videoTrack.formatDescriptions.first
+            sourceFormatHint: videoTrack.formatDescriptions.first as? CMFormatDescription
         )
         videoInput.transform = transform   // 保持原始旋转信息
         videoInput.expectsMediaDataInRealTime = false
