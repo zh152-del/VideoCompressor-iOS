@@ -19,7 +19,7 @@ struct VideoInfoReader {
         let transform = try await videoTrack.load(.preferredTransform)
         let display = VideoGeometry.displaySize(after: transform, natural: naturalSize)
         let fps = try await videoTrack.load(.nominalFrameRate)
-        let codec = codecDescription(of: videoTrack)
+        let codec = await codecDescription(of: videoTrack)
         let fileSize = (try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? Int64) ?? 0
         let creation = try? url.resourceValues(forKeys: [.creationDateKey]).creationDate
 
@@ -55,8 +55,8 @@ struct VideoInfoReader {
 
     // MARK: - 私有辅助
 
-    private static func codecDescription(of track: AVAssetTrack) -> String {
-        guard let desc = track.formatDescriptions.first as? CMFormatDescription else { return "未知" }
+    private static func codecDescription(of track: AVAssetTrack) async -> String {
+        guard let desc = (try? await track.load(.formatDescriptions))?.first else { return "未知" }
         let codecType = CMFormatDescriptionGetMediaSubType(desc)
         let fourcc = VideoGeometry.fourCCString(codecType)
         switch fourcc {

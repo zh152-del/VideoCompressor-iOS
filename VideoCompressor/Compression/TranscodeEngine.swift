@@ -29,6 +29,7 @@ struct TranscodeEngine {
         let transform = try await videoTrack.load(.preferredTransform)
         let display = VideoGeometry.displaySize(after: transform, natural: naturalSize)
         let sourceFps = try await videoTrack.load(.nominalFrameRate)
+        let videoFormatDescs = try await videoTrack.load(.formatDescriptions)
         let duration = try await asset.load(.duration).seconds
 
         // 计算目标尺寸：绝不放大低分辨率视频
@@ -69,7 +70,7 @@ struct TranscodeEngine {
         let videoInput = AVAssetWriterInput(
             mediaType: .video,
             outputSettings: videoSettings,
-            sourceFormatHint: videoTrack.formatDescriptions.first as? CMFormatDescription
+            sourceFormatHint: videoFormatDescs.first
         )
         videoInput.transform = transform   // 保持原始旋转信息
         videoInput.expectsMediaDataInRealTime = false
