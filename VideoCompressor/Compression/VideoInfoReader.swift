@@ -26,7 +26,7 @@ struct VideoInfoReader {
         return VideoMeta(durationSeconds: duration,
                          width: Int(display.width),
                          height: Int(display.height),
-                         fps: fps,
+                         fps: Double(fps),
                          codecDescription: codec,
                          fileSizeBytes: fileSize,
                          creationDate: creation)
@@ -56,7 +56,7 @@ struct VideoInfoReader {
     // MARK: - 私有辅助
 
     private static func codecDescription(of track: AVAssetTrack) -> String {
-        guard let desc = track.formatDescriptions.first as? CMFormatDescription else { return "未知" }
+        guard let desc = track.formatDescriptions.first else { return "未知" }
         let codecType = CMFormatDescriptionGetMediaSubType(desc)
         let fourcc = VideoGeometry.fourCCString(codecType)
         switch fourcc {

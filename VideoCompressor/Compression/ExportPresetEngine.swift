@@ -44,7 +44,7 @@ struct ExportPresetEngine {
         let monitor = Task {
             while !Task.isCancelled {
                 if isCancelled?() == true { session.cancelExport(); break }
-                progress?(session.progress)
+                progress?(Double(session.progress))
                 try? await Task.sleep(nanoseconds: 100_000_000)
             }
         }

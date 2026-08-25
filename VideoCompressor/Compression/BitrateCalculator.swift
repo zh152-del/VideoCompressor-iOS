@@ -23,7 +23,7 @@ enum BitrateCalculator {
 
     /// 根据目标文件大小(字节)与时长反推视频码率(bps)，为音频预留空间。
     static func bitrate(targetBytes: Int64, durationSeconds: Double) -> Int64 {
-        let audioBytes = 200_000 * 8 // 约 200KB 音频
+        let audioBytes = Int64(200_000 * 8) // 约 200KB 音频
         guard durationSeconds > 0 else { return 2_000_000 }
         let videoBytes = max(targetBytes - audioBytes, 50_000)
         let bps = Int64(Double(videoBytes * 8) / durationSeconds)

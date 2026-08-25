@@ -46,8 +46,8 @@ final class TempFileManager: ObservableObject {
 
     func refreshOccupied() {
         let contents = (try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: [.fileSizeKey])) ?? []
-        let total = contents.reduce(0) { sum, url in
-            (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0 + sum
+        let total = contents.reduce(Int64(0)) { sum, url in
+            Int64((try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0) + sum
         }
         DispatchQueue.main.async { [weak self] in self?.occupiedBytes = total }
     }

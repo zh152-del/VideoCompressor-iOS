@@ -22,7 +22,7 @@ final class PhotoLibraryService {
             throw AppError.photoPermissionDenied
         }
         return try await withCheckedThrowingContinuation { (cont: CheckedContinuation<String, Error>) in
-            PHPhotoLibrary.performChanges({
+            PHPhotoLibrary.shared().performChanges({
                 PHAssetCreationRequest.creationRequestForAssetFromVideo(atFileURL: fileURL)
             }) { success, error in
                 if success {
@@ -44,7 +44,7 @@ final class PhotoLibraryService {
         let assets = PHAsset.fetchAssets(withLocalIdentifiers: [localIdentifier], options: nil)
         guard assets.count > 0 else { return }
         try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
-            PHPhotoLibrary.performChanges({
+            PHPhotoLibrary.shared().performChanges({
                 PHAssetChangeRequest.deleteAssets(assets)
             }) { success, error in
                 if success {

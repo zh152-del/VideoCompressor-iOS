@@ -13,6 +13,11 @@ enum TaskStatus {
         return false
     }
 
+    var isPending: Bool {
+        if case .pending = self { return true }
+        return false
+    }
+
     var title: String {
         switch self {
         case .pending:           return "等待中"

@@ -46,7 +46,7 @@ struct TranscodeEngine {
             return BitrateCalculator.bitrate(quality: options.quality, height: outH)
         }()
 
-        let fps = max(1, options.fps.map { min($0, sourceFps > 0 ? sourceFps : 30) } ?? (sourceFps > 0 ? sourceFps : 30))
+        let fps = max(1.0, options.fps.map { min($0, Double(sourceFps) > 0 ? Double(sourceFps) : 30.0) } ?? (Double(sourceFps) > 0 ? Double(sourceFps) : 30.0))
         let fpsInterval = 1.0 / Double(fps)
 
         guard let writer = try? AVAssetWriter(outputURL: outputURL, fileType: .mp4) else {
@@ -69,7 +69,7 @@ struct TranscodeEngine {
         let videoInput = AVAssetWriterInput(
             mediaType: .video,
             outputSettings: videoSettings,
-            sourceFormatHint: videoTrack.formatDescriptions.first as? CMFormatDescription
+            sourceFormatHint: videoTrack.formatDescriptions.first
         )
         videoInput.transform = transform   // 保持原始旋转信息
         videoInput.expectsMediaDataInRealTime = false
@@ -164,7 +164,7 @@ struct TranscodeEngine {
             throw AppError.userCancelled
         }
 
-        writer.finishWriting()
+        await writer.finishWriting()
         if writer.status != .completed {
             try? FileManager.default.removeItem(at: outputURL)
             throw AppError.compressionFailed(writer.error?.localizedDescription ?? "写入失败")

@@ -59,7 +59,7 @@ final class CompressionSession: ObservableObject {
 
     private func handleAbort() {
         cancelled = true
-        for idx in tasks.indices where tasks[idx].status.isCompressing || tasks[idx].status == .pending {
+        for idx in tasks.indices where tasks[idx].status.isCompressing || tasks[idx].status.isPending {
             tasks[idx].status = .cancelled
         }
         temp.cleanup(finishedResults.map { $0.outputURL })
