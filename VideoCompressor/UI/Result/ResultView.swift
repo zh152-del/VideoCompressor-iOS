@@ -13,7 +13,7 @@ struct ResultView: View {
     @EnvironmentObject var history: HistoryStore
     @EnvironmentObject var settings: SettingsStore
 
-    private var isSaved: Bool { savedID != nil }
+    private var isSaved: Bool { (savedID ?? "").isEmpty == false }
     private var canDeleteOriginal: Bool { (result.item.localIdentifier ?? "").isEmpty == false }
 
     var body: some View {

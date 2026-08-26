@@ -17,7 +17,11 @@ final class PhotoLibraryService {
 
     /// 保存视频文件到图库，返回新资源的 localIdentifier（用于后续删除原片或定位）。
     func saveVideo(at fileURL: URL) async throws -> String {
-        let status = authorizationStatus()
+        // 首次使用时 status 为 .notDetermined，必须先请求授权，否则会无故抛"权限被拒绝"
+        var status = authorizationStatus()
+        if status == .notDetermined {
+            status = await requestAuthorization()
+        }
         guard status == .authorized || status == .limited else {
             throw AppError.photoPermissionDenied
         }
