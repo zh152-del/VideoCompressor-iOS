@@ -35,9 +35,9 @@ final class PhotoLibraryService {
                 let request = PHAssetCreationRequest.creationRequestForAssetFromVideo(atFileURL: fileURL)
                 placeholderID = request?.placeholderForCreatedAsset?.localIdentifier
             }) { success, error in
-                // 整个类标记为 @MainActor，continuation 必须在主 actor 上 resume，
-                // 用 MainActor.run 包装可防止真机上因隔离违规闪退。
-                MainActor.run {
+                // performChanges 的 completion 可能在非主线程触发，统一派发到主线程再 resume，
+                // 防止真机上因线程/隔离问题闪退。
+                DispatchQueue.main.async {
                     if success, let id = placeholderID, !id.isEmpty {
                         cont.resume(returning: id)
                     } else if let error = error {
@@ -59,7 +59,7 @@ final class PhotoLibraryService {
             PHPhotoLibrary.shared().performChanges({
                 PHAssetChangeRequest.deleteAssets(assets)
             }) { success, error in
-                MainActor.run {
+                DispatchQueue.main.async {
                     if success {
                         cont.resume()
                     } else {

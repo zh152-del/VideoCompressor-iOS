@@ -1,0 +1,829 @@
+﻿2026-08-26T12:34:59.1132860Z Current runner version: '2.336.0'
+2026-08-26T12:34:59.1167330Z ##[group]Runner Image Provisioner
+2026-08-26T12:34:59.1169530Z Hosted Compute Agent
+2026-08-26T12:34:59.1170940Z Version: 20260707.563
+2026-08-26T12:34:59.1172300Z Commit: 02667638d2b423fbc733a8e32a88b44996a3ba6e
+2026-08-26T12:34:59.1174450Z Build Date: 2026-07-07T19:33:50Z
+2026-08-26T12:34:59.1175830Z Worker ID: {66e6525f-723c-49c8-8a45-3f515df4fd71}
+2026-08-26T12:34:59.1177220Z Azure Region: westus
+2026-08-26T12:34:59.1178610Z ##[endgroup]
+2026-08-26T12:34:59.1182410Z ##[group]Operating System
+2026-08-26T12:34:59.1183520Z macOS
+2026-08-26T12:34:59.1184440Z 15.7.7
+2026-08-26T12:34:59.1185520Z 24G720
+2026-08-26T12:34:59.1186440Z ##[endgroup]
+2026-08-26T12:34:59.1187430Z ##[group]Runner Image
+2026-08-26T12:34:59.1188460Z Image: macos-15-arm64
+2026-08-26T12:34:59.1189480Z Version: 20260727.0256.1
+2026-08-26T12:34:59.1192080Z Included Software: https://github.com/actions/runner-images/blob/macos-15-arm64/20260727.0256/images/macos/macos-15-arm64-Readme.md
+2026-08-26T12:34:59.1195100Z Image Release: https://github.com/actions/runner-images/releases/tag/macos-15-arm64%2F20260727.0256
+2026-08-26T12:34:59.1197040Z ##[endgroup]
+2026-08-26T12:34:59.1200480Z ##[group]GITHUB_TOKEN Permissions
+2026-08-26T12:34:59.1207680Z Contents: read
+2026-08-26T12:34:59.1208280Z Metadata: read
+2026-08-26T12:34:59.1211740Z Packages: read
+2026-08-26T12:34:59.1213770Z ##[endgroup]
+2026-08-26T12:34:59.1220410Z Secret source: Actions
+2026-08-26T12:34:59.1221610Z Prepare workflow directory
+2026-08-26T12:34:59.1634500Z Prepare all required actions
+2026-08-26T12:34:59.1699170Z Getting action download info
+2026-08-26T12:34:59.5848760Z Download action repository 'actions/checkout@v4' (SHA:11d5960a326750d5838078e36cf38b85af677262)
+2026-08-26T12:34:59.9420760Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+2026-08-26T12:35:00.2819160Z Complete job name: build
+2026-08-26T12:35:00.3434630Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+2026-08-26T12:35:00.3442820Z ##[group]Run actions/checkout@v4
+2026-08-26T12:35:00.3443320Z with:
+2026-08-26T12:35:00.3443670Z   repository: zh152-del/VideoCompressor-iOS
+2026-08-26T12:35:00.3447840Z   token: ***
+2026-08-26T12:35:00.3448560Z   ssh-strict: true
+2026-08-26T12:35:00.3448890Z   ssh-user: git
+2026-08-26T12:35:00.3449220Z   persist-credentials: true
+2026-08-26T12:35:00.3449570Z   clean: true
+2026-08-26T12:35:00.3449930Z   sparse-checkout-cone-mode: true
+2026-08-26T12:35:00.3450370Z   fetch-depth: 1
+2026-08-26T12:35:00.3450690Z   fetch-tags: false
+2026-08-26T12:35:00.3451340Z   show-progress: true
+2026-08-26T12:35:00.3451740Z   lfs: false
+2026-08-26T12:35:00.3452120Z   submodules: false
+2026-08-26T12:35:00.3452470Z   set-safe-directory: true
+2026-08-26T12:35:00.3452870Z   allow-unsafe-pr-checkout: false
+2026-08-26T12:35:00.3453670Z ##[endgroup]
+2026-08-26T12:35:00.8704630Z Syncing repository: zh152-del/VideoCompressor-iOS
+2026-08-26T12:35:00.8710170Z ##[group]Getting Git version info
+2026-08-26T12:35:00.8712130Z Working directory is '/Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS'
+2026-08-26T12:35:00.8716470Z [command]/opt/homebrew/bin/git version
+2026-08-26T12:35:00.9312940Z git version 2.55.0
+2026-08-26T12:35:00.9337330Z ##[endgroup]
+2026-08-26T12:35:00.9351330Z Copying '/Users/runner/.gitconfig' to '/Users/runner/work/_temp/137f2c77-d1fb-4c1f-ad9d-cabc55780b2f/.gitconfig'
+2026-08-26T12:35:00.9371630Z Temporarily overriding HOME='/Users/runner/work/_temp/137f2c77-d1fb-4c1f-ad9d-cabc55780b2f' before making global git config changes
+2026-08-26T12:35:00.9375170Z Adding repository directory to the temporary git global config as a safe directory
+2026-08-26T12:35:00.9378380Z [command]/opt/homebrew/bin/git config --global --add safe.directory /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:35:00.9525070Z Deleting the contents of '/Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS'
+2026-08-26T12:35:00.9528420Z ##[group]Initializing the repository
+2026-08-26T12:35:00.9531260Z [command]/opt/homebrew/bin/git init /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:35:00.9871570Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-08-26T12:35:00.9872720Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-08-26T12:35:00.9873570Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-08-26T12:35:00.9874220Z hint: call:
+2026-08-26T12:35:00.9874620Z hint:
+2026-08-26T12:35:00.9875110Z hint: 	git config --global init.defaultBranch <name>
+2026-08-26T12:35:00.9875690Z hint:
+2026-08-26T12:35:00.9876270Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-08-26T12:35:00.9877070Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-08-26T12:35:00.9877710Z hint:
+2026-08-26T12:35:00.9878110Z hint: 	git branch -m <name>
+2026-08-26T12:35:00.9878650Z hint:
+2026-08-26T12:35:00.9879190Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-08-26T12:35:00.9883990Z Initialized empty Git repository in /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/.git/
+2026-08-26T12:35:00.9904290Z [command]/opt/homebrew/bin/git remote add origin https://github.com/zh152-del/VideoCompressor-iOS
+2026-08-26T12:35:01.0025470Z ##[endgroup]
+2026-08-26T12:35:01.0027730Z ##[group]Disabling automatic garbage collection
+2026-08-26T12:35:01.0029640Z [command]/opt/homebrew/bin/git config --local gc.auto 0
+2026-08-26T12:35:01.0142920Z ##[endgroup]
+2026-08-26T12:35:01.0143690Z ##[group]Setting up auth
+2026-08-26T12:35:01.0147350Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-08-26T12:35:01.0274360Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-08-26T12:35:01.1686380Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-08-26T12:35:01.1791700Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-08-26T12:35:01.2873540Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-08-26T12:35:01.2984480Z [command]/opt/homebrew/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-08-26T12:35:01.4232520Z [command]/opt/homebrew/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-08-26T12:35:01.4337840Z ##[endgroup]
+2026-08-26T12:35:01.4338770Z ##[group]Fetching the repository
+2026-08-26T12:35:01.4352770Z [command]/opt/homebrew/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +85bef18bf4a9869b21b150f37c165c4de46b55fc:refs/remotes/origin/main
+2026-08-26T12:35:02.1495050Z From https://github.com/zh152-del/VideoCompressor-iOS
+2026-08-26T12:35:02.1498450Z  * [new ref]         85bef18bf4a9869b21b150f37c165c4de46b55fc -> origin/main
+2026-08-26T12:35:02.1504430Z ##[endgroup]
+2026-08-26T12:35:02.1506600Z ##[group]Determining the checkout info
+2026-08-26T12:35:02.1509120Z ##[endgroup]
+2026-08-26T12:35:02.1510650Z [command]/opt/homebrew/bin/git sparse-checkout disable
+2026-08-26T12:35:02.1647970Z [command]/opt/homebrew/bin/git config --local --unset-all extensions.worktreeConfig
+2026-08-26T12:35:02.1722150Z ##[group]Checking out the ref
+2026-08-26T12:35:02.1731160Z [command]/opt/homebrew/bin/git checkout --progress --force -B main refs/remotes/origin/main
+2026-08-26T12:35:02.2550910Z Switched to a new branch 'main'
+2026-08-26T12:35:02.2565320Z branch 'main' set up to track 'origin/main'.
+2026-08-26T12:35:02.2570550Z ##[endgroup]
+2026-08-26T12:35:02.2716340Z [command]/opt/homebrew/bin/git log -1 --format=%H
+2026-08-26T12:35:02.2821860Z 85bef18bf4a9869b21b150f37c165c4de46b55fc
+2026-08-26T12:35:02.3138830Z ##[group]Run sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+2026-08-26T12:35:02.3141580Z [36;1msudo xcode-select -s /Applications/Xcode.app/Contents/Developer[0m
+2026-08-26T12:35:02.3204710Z shell: /bin/bash -e {0}
+2026-08-26T12:35:02.3205580Z ##[endgroup]
+2026-08-26T12:35:02.4412470Z ##[group]Run xcodebuild -showsdks
+2026-08-26T12:35:02.4413440Z [36;1mxcodebuild -showsdks[0m
+2026-08-26T12:35:02.4464210Z shell: /bin/bash -e {0}
+2026-08-26T12:35:02.4465060Z ##[endgroup]
+2026-08-26T12:35:05.4643510Z DriverKit SDKs:
+2026-08-26T12:35:05.4657540Z 	DriverKit 24.5                	-sdk driverkit24.5
+2026-08-26T12:35:05.4658330Z 
+2026-08-26T12:35:05.4659310Z iOS SDKs:
+2026-08-26T12:35:05.4659620Z 	iOS 18.5                      	-sdk iphoneos18.5
+2026-08-26T12:35:05.4659850Z 
+2026-08-26T12:35:05.4659960Z iOS Simulator SDKs:
+2026-08-26T12:35:05.4660240Z 	Simulator - iOS 18.5          	-sdk iphonesimulator18.5
+2026-08-26T12:35:05.4660520Z 
+2026-08-26T12:35:05.4661550Z macOS SDKs:
+2026-08-26T12:35:05.4661950Z 	macOS 15.5                    	-sdk macosx15.5
+2026-08-26T12:35:05.4662370Z 	macOS 15.5                    	-sdk macosx15.5
+2026-08-26T12:35:05.4662590Z 
+2026-08-26T12:35:05.4662640Z tvOS SDKs:
+2026-08-26T12:35:05.4663860Z 	tvOS 18.5                     	-sdk appletvos18.5
+2026-08-26T12:35:05.4664060Z 
+2026-08-26T12:35:05.4664180Z tvOS Simulator SDKs:
+2026-08-26T12:35:05.4664480Z 	Simulator - tvOS 18.5         	-sdk appletvsimulator18.5
+2026-08-26T12:35:05.4664700Z 
+2026-08-26T12:35:05.4665630Z visionOS SDKs:
+2026-08-26T12:35:05.4666110Z 	visionOS 2.5                  	-sdk xros2.5
+2026-08-26T12:35:05.4666290Z 
+2026-08-26T12:35:05.4667140Z visionOS Simulator SDKs:
+2026-08-26T12:35:05.4667960Z 	Simulator - visionOS 2.5      	-sdk xrsimulator2.5
+2026-08-26T12:35:05.4679600Z 
+2026-08-26T12:35:05.4679830Z watchOS SDKs:
+2026-08-26T12:35:05.4680650Z 	watchOS 11.5                  	-sdk watchos11.5
+2026-08-26T12:35:05.4681250Z 
+2026-08-26T12:35:05.4681640Z watchOS Simulator SDKs:
+2026-08-26T12:35:05.4682420Z 	Simulator - watchOS 11.5      	-sdk watchsimulator11.5
+2026-08-26T12:35:05.4683060Z 
+2026-08-26T12:35:05.4759450Z ##[group]Run brew install xcodegen
+2026-08-26T12:35:05.4759890Z [36;1mbrew install xcodegen[0m
+2026-08-26T12:35:05.4805940Z shell: /bin/bash -e {0}
+2026-08-26T12:35:05.4806350Z ##[endgroup]
+2026-08-26T12:35:09.8150320Z ##[warning]The following taps are not trusted:
+  aws/tap
+
+Homebrew is currently ignoring formulae, casks and commands from these taps because tap trust is required.
+Untap them with:
+  brew untap aws/tap
+Trust specific formulae, casks and commands with:
+  brew trust --formula <user>/<tap>/<formula>
+  brew trust --cask <user>/<tap>/<cask>
+  brew trust --command <user>/<tap>/<command>
+Whole-tap trust is broader and includes all current and future formulae,
+casks and commands from the listed taps. Trust whole taps with:
+  brew trust aws/tap
+To disable trust checks:
+  export HOMEBREW_NO_REQUIRE_TAP_TRUST=1
+This is not recommended and will be removed in a later release.
+For more information, see:
+  https://docs.brew.sh/Tap-Trust
+
+2026-08-26T12:35:10.8370750Z [34m==>[0m [1mWould install 1 formula:[0m
+2026-08-26T12:35:10.8371590Z xcodegen
+2026-08-26T12:35:10.8653210Z [34m==>[0m [1mDownloading https://ghcr.io/v2/homebrew/core/xcodegen/manifests/2.46.0-1[0m
+2026-08-26T12:35:11.1372500Z [32m==>[0m [1mFetching downloads for: [32mxcodegen[39m[0m
+2026-08-26T12:35:11.5370130Z ✔︎ Bottle xcodegen (2.46.0)
+2026-08-26T12:35:11.5918710Z [34m==>[0m [1mPouring xcodegen--2.46.0.arm64_sequoia.bottle.1.tar.gz[0m
+2026-08-26T12:35:11.7137140Z 🍺  /opt/homebrew/Cellar/xcodegen/2.46.0: 38 files, 7.5MB
+2026-08-26T12:35:11.7640630Z ##[group]Run xcodegen generate
+2026-08-26T12:35:11.7812300Z [36;1mxcodegen generate[0m
+2026-08-26T12:35:11.7861400Z shell: /bin/bash -e {0}
+2026-08-26T12:35:11.7861760Z ##[endgroup]
+2026-08-26T12:35:11.8948720Z ⚙️  Generating plists...
+2026-08-26T12:35:11.8994610Z ⚙️  Generating project...
+2026-08-26T12:35:11.9281790Z ⚙️  Writing project...
+2026-08-26T12:35:11.9445270Z Created project at /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor.xcodeproj
+2026-08-26T12:35:11.9529160Z ##[group]Run xcodebuild test \
+2026-08-26T12:35:11.9529570Z [36;1mxcodebuild test \[0m
+2026-08-26T12:35:11.9529880Z [36;1m  -scheme VideoCompressor \[0m
+2026-08-26T12:35:11.9530880Z [36;1m  -configuration Debug \[0m
+2026-08-26T12:35:11.9531240Z [36;1m  -sdk iphonesimulator \[0m
+2026-08-26T12:35:11.9531690Z [36;1m  -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5' \[0m
+2026-08-26T12:35:11.9532010Z [36;1m  -derivedDataPath build \[0m
+2026-08-26T12:35:11.9533860Z [36;1m  CODE_SIGNING_ALLOWED=NO \[0m
+2026-08-26T12:35:11.9534470Z [36;1m  ONLY_ACTIVE_ARCH=YES \[0m
+2026-08-26T12:35:11.9534880Z [36;1m  clean[0m
+2026-08-26T12:35:11.9662470Z shell: /bin/bash -e {0}
+2026-08-26T12:35:11.9663870Z ##[endgroup]
+2026-08-26T12:35:13.2283340Z Command line invocation:
+2026-08-26T12:35:13.2287190Z     /Applications/Xcode_16.4.app/Contents/Developer/usr/bin/xcodebuild test -scheme VideoCompressor -configuration Debug -sdk iphonesimulator -destination "platform=iOS Simulator,name=iPhone 16,OS=18.5" -derivedDataPath build CODE_SIGNING_ALLOWED=NO ONLY_ACTIVE_ARCH=YES clean
+2026-08-26T12:35:13.2289920Z 
+2026-08-26T12:35:13.2290190Z Build settings from command line:
+2026-08-26T12:35:13.2290790Z     CODE_SIGNING_ALLOWED = NO
+2026-08-26T12:35:13.2291550Z     ONLY_ACTIVE_ARCH = YES
+2026-08-26T12:35:13.2292220Z     SDKROOT = iphonesimulator18.5
+2026-08-26T12:35:13.2292630Z 
+2026-08-26T12:36:04.9078790Z --- xcodebuild: WARNING: Using the first of multiple matching destinations:
+2026-08-26T12:36:04.9080560Z { platform:iOS Simulator, arch:arm64, id:E514A76C-D366-4B28-A6F6-E62A57B237C3, OS:18.5, name:iPhone 16 }
+2026-08-26T12:36:04.9081630Z { platform:iOS Simulator, arch:x86_64, id:E514A76C-D366-4B28-A6F6-E62A57B237C3, OS:18.5, name:iPhone 16 }
+2026-08-26T12:36:05.8891540Z ComputePackagePrebuildTargetDependencyGraph
+2026-08-26T12:36:06.0082680Z 
+2026-08-26T12:36:06.0149440Z Prepare packages
+2026-08-26T12:36:06.0156500Z 
+2026-08-26T12:36:06.0167010Z CreateBuildRequest
+2026-08-26T12:36:06.0177700Z 
+2026-08-26T12:36:06.0183060Z SendProjectDescription
+2026-08-26T12:36:06.0324220Z 
+2026-08-26T12:36:06.0326090Z CreateBuildOperation
+2026-08-26T12:36:06.0463800Z 
+2026-08-26T12:36:06.0487050Z ComputeTargetDependencyGraph
+2026-08-26T12:36:06.0778260Z note: Building targets in dependency order
+2026-08-26T12:36:06.0818690Z note: Target dependency graph (2 targets)
+2026-08-26T12:36:06.0845170Z     Target 'VideoCompressorTests' in project 'VideoCompressor'
+2026-08-26T12:36:06.0846710Z         ➜ Explicit dependency on target 'VideoCompressor' in project 'VideoCompressor'
+2026-08-26T12:36:06.0847550Z     Target 'VideoCompressor' in project 'VideoCompressor' (no dependencies)
+2026-08-26T12:36:06.0847920Z 
+2026-08-26T12:36:06.0848110Z GatherProvisioningInputs
+2026-08-26T12:36:06.0848230Z 
+2026-08-26T12:36:06.0860890Z CreateBuildDescription
+2026-08-26T12:36:06.1086620Z 
+2026-08-26T12:36:06.1092090Z ExecuteExternalTool /Applications/Xcode_16.4.app/Contents/Developer/usr/bin/ibtool --version --output-format xml1
+2026-08-26T12:36:09.6468800Z 
+2026-08-26T12:36:09.6575680Z ExecuteExternalTool /Applications/Xcode_16.4.app/Contents/Developer/usr/bin/actool --print-asset-tag-combinations --output-format xml1 /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Resources/Assets.xcassets
+2026-08-26T12:36:09.6705840Z 
+2026-08-26T12:36:09.6725670Z ExecuteExternalTool /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc --version
+2026-08-26T12:36:09.6827090Z 
+2026-08-26T12:36:09.6930120Z ExecuteExternalTool /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -isysroot /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator18.5.sdk -x c -c /dev/null
+2026-08-26T12:36:09.7042790Z 
+2026-08-26T12:36:09.7146430Z ExecuteExternalTool /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld -version_details
+2026-08-26T12:36:09.7251160Z 
+2026-08-26T12:36:09.7353420Z ExecuteExternalTool /Applications/Xcode_16.4.app/Contents/Developer/usr/bin/actool --version --output-format xml1
+2026-08-26T12:36:09.7457330Z 
+2026-08-26T12:36:09.7642170Z Build description signature: 16896971d248ca5d590e38a039214ab3
+2026-08-26T12:36:09.7760730Z Build description path: /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/XCBuildData/16896971d248ca5d590e38a039214ab3.xcbuilddata
+2026-08-26T12:36:09.7862550Z CreateBuildDirectory /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products
+2026-08-26T12:36:09.7965950Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor.xcodeproj
+2026-08-26T12:36:09.8072260Z     builtin-create-build-directory /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products
+2026-08-26T12:36:09.8183110Z 
+2026-08-26T12:36:09.8286340Z CreateBuildDirectory /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex
+2026-08-26T12:36:09.8389020Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor.xcodeproj
+2026-08-26T12:36:09.8497470Z     builtin-create-build-directory /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex
+2026-08-26T12:36:09.8606200Z 
+2026-08-26T12:36:09.8726180Z ClangStatCache /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator18.5.sdk /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/SDKStatCaches.noindex/iphonesimulator18.5-22F76-96ae0914227b19deccb34b33ba7b5dea.sdkstatcache
+2026-08-26T12:36:09.8842200Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor.xcodeproj
+2026-08-26T12:36:09.8946370Z     /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator18.5.sdk -o /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/SDKStatCaches.noindex/iphonesimulator18.5-22F76-96ae0914227b19deccb34b33ba7b5dea.sdkstatcache
+2026-08-26T12:36:12.7315200Z 
+2026-08-26T12:36:12.7416750Z CreateBuildDirectory /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator
+2026-08-26T12:36:12.7533230Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor.xcodeproj
+2026-08-26T12:36:12.7616590Z     builtin-create-build-directory /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator
+2026-08-26T12:36:12.7725300Z 
+2026-08-26T12:36:12.7836360Z WriteAuxiliaryFile /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor-9a089cb149bbaeb7f37f0ada582a292f-VFS-iphonesimulator/all-product-headers.yaml
+2026-08-26T12:36:12.7951330Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor.xcodeproj
+2026-08-26T12:36:12.8053800Z     write-file /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor-9a089cb149bbaeb7f37f0ada582a292f-VFS-iphonesimulator/all-product-headers.yaml
+2026-08-26T12:36:12.8152810Z 
+2026-08-26T12:36:12.8254600Z CreateBuildDirectory /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/EagerLinkingTBDs/Debug-iphonesimulator
+2026-08-26T12:36:12.8354680Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor.xcodeproj
+2026-08-26T12:36:12.8455200Z     builtin-create-build-directory /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/EagerLinkingTBDs/Debug-iphonesimulator
+2026-08-26T12:36:12.8556050Z 
+2026-08-26T12:36:12.8671200Z WriteAuxiliaryFile /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressorTests.build/VideoCompressorTests.DependencyStaticMetadataFileList (in target 'VideoCompressorTests' from project 'VideoCompressor')
+2026-08-26T12:36:12.8673170Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:12.8789230Z     write-file /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressorTests.build/VideoCompressorTests.DependencyStaticMetadataFileList
+2026-08-26T12:36:12.8898810Z 
+2026-08-26T12:36:12.9004480Z WriteAuxiliaryFile /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressorTests.build/VideoCompressorTests.hmap (in target 'VideoCompressorTests' from project 'VideoCompressor')
+2026-08-26T12:36:12.9112770Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:12.9216890Z     write-file /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressorTests.build/VideoCompressorTests.hmap
+2026-08-26T12:36:12.9330400Z 
+2026-08-26T12:36:12.9433000Z WriteAuxiliaryFile /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressorTests.build/VideoCompressorTests.DependencyMetadataFileList (in target 'VideoCompressorTests' from project 'VideoCompressor')
+2026-08-26T12:36:12.9541070Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:12.9646190Z     write-file /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressorTests.build/VideoCompressorTests.DependencyMetadataFileList
+2026-08-26T12:36:12.9750930Z 
+2026-08-26T12:36:12.9855240Z WriteAuxiliaryFile /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressorTests.build/VideoCompressorTests-project-headers.hmap (in target 'VideoCompressorTests' from project 'VideoCompressor')
+2026-08-26T12:36:12.9966670Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:13.0081080Z     write-file /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressorTests.build/VideoCompressorTests-project-headers.hmap
+2026-08-26T12:36:13.0183800Z 
+2026-08-26T12:36:13.0290180Z WriteAuxiliaryFile /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressorTests.build/VideoCompressorTests-own-target-headers.hmap (in target 'VideoCompressorTests' from project 'VideoCompressor')
+2026-08-26T12:36:13.0398250Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:13.0474110Z     write-file /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressorTests.build/VideoCompressorTests-own-target-headers.hmap
+2026-08-26T12:36:13.0580150Z 
+2026-08-26T12:36:13.0687400Z WriteAuxiliaryFile /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressorTests.build/VideoCompressorTests-generated-files.hmap (in target 'VideoCompressorTests' from project 'VideoCompressor')
+2026-08-26T12:36:13.0801390Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:13.0905180Z     write-file /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressorTests.build/VideoCompressorTests-generated-files.hmap
+2026-08-26T12:36:13.1007110Z 
+2026-08-26T12:36:13.1110730Z WriteAuxiliaryFile /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressorTests.build/VideoCompressorTests-all-target-headers.hmap (in target 'VideoCompressorTests' from project 'VideoCompressor')
+2026-08-26T12:36:13.1211310Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:13.1313450Z     write-file /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressorTests.build/VideoCompressorTests-all-target-headers.hmap
+2026-08-26T12:36:13.1415310Z 
+2026-08-26T12:36:13.1519480Z WriteAuxiliaryFile /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressorTests.build/VideoCompressorTests-all-non-framework-target-headers.hmap (in target 'VideoCompressorTests' from project 'VideoCompressor')
+2026-08-26T12:36:13.1619450Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:13.1721650Z     write-file /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressorTests.build/VideoCompressorTests-all-non-framework-target-headers.hmap
+2026-08-26T12:36:13.1822410Z 
+2026-08-26T12:36:13.1928440Z WriteAuxiliaryFile /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressorTests.build/Objects-normal/arm64/VideoCompressorTests_const_extract_protocols.json (in target 'VideoCompressorTests' from project 'VideoCompressor')
+2026-08-26T12:36:13.2025060Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:13.2129550Z     write-file /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressorTests.build/Objects-normal/arm64/VideoCompressorTests_const_extract_protocols.json
+2026-08-26T12:36:13.2233890Z 
+2026-08-26T12:36:13.2337770Z WriteAuxiliaryFile /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressorTests.build/Objects-normal/arm64/VideoCompressorTests.SwiftFileList (in target 'VideoCompressorTests' from project 'VideoCompressor')
+2026-08-26T12:36:13.2441360Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:13.2542990Z     write-file /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressorTests.build/Objects-normal/arm64/VideoCompressorTests.SwiftFileList
+2026-08-26T12:36:13.2642040Z 
+2026-08-26T12:36:13.2745000Z WriteAuxiliaryFile /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressorTests.build/Objects-normal/arm64/VideoCompressorTests.SwiftConstValuesFileList (in target 'VideoCompressorTests' from project 'VideoCompressor')
+2026-08-26T12:36:13.2850970Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:13.2953280Z     write-file /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressorTests.build/Objects-normal/arm64/VideoCompressorTests.SwiftConstValuesFileList
+2026-08-26T12:36:13.3054730Z 
+2026-08-26T12:36:13.3156960Z WriteAuxiliaryFile /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressorTests.build/Objects-normal/arm64/VideoCompressorTests.LinkFileList (in target 'VideoCompressorTests' from project 'VideoCompressor')
+2026-08-26T12:36:13.3258720Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:13.3423540Z     write-file /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressorTests.build/Objects-normal/arm64/VideoCompressorTests.LinkFileList
+2026-08-26T12:36:13.3427620Z 
+2026-08-26T12:36:13.3536070Z WriteAuxiliaryFile /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressorTests.build/Objects-normal/arm64/VideoCompressorTests-OutputFileMap.json (in target 'VideoCompressorTests' from project 'VideoCompressor')
+2026-08-26T12:36:13.3642380Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:13.3744390Z     write-file /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressorTests.build/Objects-normal/arm64/VideoCompressorTests-OutputFileMap.json
+2026-08-26T12:36:13.3848400Z 
+2026-08-26T12:36:13.3953790Z WriteAuxiliaryFile /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/VideoCompressor.hmap (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:13.4065090Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:13.4170450Z     write-file /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/VideoCompressor.hmap
+2026-08-26T12:36:13.4276370Z 
+2026-08-26T12:36:13.4379840Z WriteAuxiliaryFile /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/VideoCompressor.DependencyStaticMetadataFileList (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:13.4488960Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:13.4591290Z     write-file /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/VideoCompressor.DependencyStaticMetadataFileList
+2026-08-26T12:36:13.4693140Z 
+2026-08-26T12:36:13.4800720Z WriteAuxiliaryFile /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/VideoCompressor.DependencyMetadataFileList (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:13.4904660Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:13.5028980Z     write-file /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/VideoCompressor.DependencyMetadataFileList
+2026-08-26T12:36:13.5132080Z 
+2026-08-26T12:36:13.5234100Z WriteAuxiliaryFile /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/VideoCompressor-project-headers.hmap (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:13.5347910Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:13.5454690Z     write-file /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/VideoCompressor-project-headers.hmap
+2026-08-26T12:36:13.5559840Z 
+2026-08-26T12:36:13.5664610Z WriteAuxiliaryFile /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/VideoCompressor-own-target-headers.hmap (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:13.5719180Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:13.5825140Z     write-file /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/VideoCompressor-own-target-headers.hmap
+2026-08-26T12:36:13.5928760Z 
+2026-08-26T12:36:13.6037030Z WriteAuxiliaryFile /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/VideoCompressor-generated-files.hmap (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:13.6141830Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:13.6243970Z     write-file /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/VideoCompressor-generated-files.hmap
+2026-08-26T12:36:13.6346230Z 
+2026-08-26T12:36:13.6448280Z WriteAuxiliaryFile /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/VideoCompressor-all-target-headers.hmap (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:13.6715500Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:13.6718890Z     write-file /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/VideoCompressor-all-target-headers.hmap
+2026-08-26T12:36:13.6821140Z 
+2026-08-26T12:36:13.6927920Z WriteAuxiliaryFile /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/VideoCompressor-all-non-framework-target-headers.hmap (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:13.7030090Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:13.7131910Z     write-file /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/VideoCompressor-all-non-framework-target-headers.hmap
+2026-08-26T12:36:13.7233450Z 
+2026-08-26T12:36:13.7346930Z WriteAuxiliaryFile /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/VideoCompressor-DebugDylibPath-normal-arm64.txt (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:13.7450300Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:13.7552240Z     write-file /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/VideoCompressor-DebugDylibPath-normal-arm64.txt
+2026-08-26T12:36:13.7657540Z 
+2026-08-26T12:36:13.7761770Z WriteAuxiliaryFile /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/VideoCompressor-DebugDylibInstallName-normal-arm64.txt (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:13.7872580Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:13.7980720Z     write-file /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/VideoCompressor-DebugDylibInstallName-normal-arm64.txt
+2026-08-26T12:36:13.8086370Z 
+2026-08-26T12:36:13.8192100Z WriteAuxiliaryFile /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/Objects-normal/arm64/VideoCompressor_const_extract_protocols.json (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:13.8295350Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:13.8402630Z     write-file /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/Objects-normal/arm64/VideoCompressor_const_extract_protocols.json
+2026-08-26T12:36:13.8509210Z 
+2026-08-26T12:36:13.8621740Z WriteAuxiliaryFile /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/Objects-normal/arm64/VideoCompressor.SwiftFileList (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:13.8727810Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:13.8833690Z     write-file /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/Objects-normal/arm64/VideoCompressor.SwiftFileList
+2026-08-26T12:36:13.8935540Z 
+2026-08-26T12:36:13.9037630Z WriteAuxiliaryFile /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/Objects-normal/arm64/VideoCompressor.SwiftConstValuesFileList (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:13.9142140Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:13.9252190Z     write-file /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/Objects-normal/arm64/VideoCompressor.SwiftConstValuesFileList
+2026-08-26T12:36:13.9363290Z 
+2026-08-26T12:36:13.9461690Z WriteAuxiliaryFile /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/Objects-normal/arm64/VideoCompressor.LinkFileList (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:13.9564400Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:13.9666560Z     write-file /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/Objects-normal/arm64/VideoCompressor.LinkFileList
+2026-08-26T12:36:13.9769370Z 
+2026-08-26T12:36:13.9873280Z WriteAuxiliaryFile /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/Objects-normal/arm64/VideoCompressor-OutputFileMap.json (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:13.9982490Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:14.0084200Z     write-file /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/Objects-normal/arm64/VideoCompressor-OutputFileMap.json
+2026-08-26T12:36:14.0189440Z 
+2026-08-26T12:36:14.0291440Z MkDir /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator/VideoCompressor.app/PlugIns/VideoCompressorTests.xctest (in target 'VideoCompressorTests' from project 'VideoCompressor')
+2026-08-26T12:36:14.0401350Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:14.0520730Z     /bin/mkdir -p /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator/VideoCompressor.app/PlugIns/VideoCompressorTests.xctest
+2026-08-26T12:36:14.0623150Z 
+2026-08-26T12:36:14.0733410Z MkDir /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator/VideoCompressor.app/PlugIns (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:14.0828850Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:14.0927900Z     /bin/mkdir -p /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator/VideoCompressor.app/PlugIns
+2026-08-26T12:36:14.1028610Z 
+2026-08-26T12:36:14.1129870Z MkDir /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator/VideoCompressor.app/Frameworks (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:14.1230600Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:14.1334400Z     /bin/mkdir -p /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator/VideoCompressor.app/Frameworks
+2026-08-26T12:36:14.1433410Z 
+2026-08-26T12:36:14.1537250Z MkDir /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator/VideoCompressor.app (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:14.1637840Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:14.1742300Z     /bin/mkdir -p /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator/VideoCompressor.app
+2026-08-26T12:36:14.1844570Z 
+2026-08-26T12:36:14.1954300Z Ld /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator/VideoCompressor.app/__preview.dylib normal (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:14.2057850Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:14.2166590Z     /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -Xlinker -reproducible -target arm64-apple-ios16.0-simulator -dynamiclib -isysroot /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator18.5.sdk -O0 -L/Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator -F/Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator -install_name @rpath/VideoCompressor.debug.dylib -dead_strip -rdynamic -Xlinker -no_deduplicate -Xlinker -objc_abi_version -Xlinker 2 -Xlinker -debug_variant -Xlinker -dependency_info -Xlinker /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/Objects-normal/arm64/VideoCompressor_dependency_info.dat -o /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator/VideoCompressor.app/__preview.dylib
+2026-08-26T12:36:14.2273360Z 
+2026-08-26T12:36:14.2375250Z MkDir /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/assetcatalog_output/unthinned (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:14.2476740Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:14.2578730Z     /bin/mkdir -p /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/assetcatalog_output/unthinned
+2026-08-26T12:36:14.2682250Z 
+2026-08-26T12:36:14.2786500Z MkDir /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/assetcatalog_output/thinned (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:14.2884700Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:14.2987470Z     /bin/mkdir -p /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/assetcatalog_output/thinned
+2026-08-26T12:36:14.3089550Z 
+2026-08-26T12:36:14.3198190Z GenerateAssetSymbols /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Resources/Assets.xcassets (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:14.3301460Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:14.3411150Z     /Applications/Xcode_16.4.app/Contents/Developer/usr/bin/actool /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Resources/Assets.xcassets --compile /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator/VideoCompressor.app --output-format human-readable-text --notices --warnings --export-dependency-info /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/assetcatalog_dependencies --output-partial-info-plist /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/assetcatalog_generated_info.plist --app-icon AppIcon --accent-color AccentColor --compress-pngs --enable-on-demand-resources YES --development-region en --target-device iphone --target-device ipad --minimum-deployment-target 16.0 --platform iphonesimulator --bundle-identifier com.videocompressor.VideoCompressor --generate-swift-asset-symbol-extensions NO --generate-swift-asset-symbols /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/DerivedSources/GeneratedAssetSymbols.swift --generate-objc-asset-symbols /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/DerivedSources/GeneratedAssetSymbols.h --generate-asset-symbol-index /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/DerivedSources/GeneratedAssetSymbols-Index.plist
+2026-08-26T12:36:14.3510550Z /* com.apple.actool.compilation-results */
+2026-08-26T12:36:14.3640340Z /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/DerivedSources/GeneratedAssetSymbols-Index.plist
+2026-08-26T12:36:14.3760200Z /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/DerivedSources/GeneratedAssetSymbols.h
+2026-08-26T12:36:14.3899220Z /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/DerivedSources/GeneratedAssetSymbols.swift
+2026-08-26T12:36:14.4039440Z 
+2026-08-26T12:36:14.4097430Z 
+2026-08-26T12:36:14.4247840Z Copy /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator/VideoCompressor.app/Frameworks/libXCTestSwiftSupport.dylib /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/usr/lib/libXCTestSwiftSupport.dylib (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:14.4376650Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:14.4505740Z     builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -exclude Headers -exclude PrivateHeaders -exclude Modules -exclude \*.tbd -resolve-src-symlinks /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/usr/lib/libXCTestSwiftSupport.dylib /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator/VideoCompressor.app/Frameworks
+2026-08-26T12:36:14.4508110Z 
+2026-08-26T12:36:14.4612090Z Copy /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator/VideoCompressor.app/Frameworks/libXCTestBundleInject.dylib /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/usr/lib/libXCTestBundleInject.dylib (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:14.4718140Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:14.4829360Z     builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -exclude Headers -exclude PrivateHeaders -exclude Modules -exclude \*.tbd -resolve-src-symlinks /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/usr/lib/libXCTestBundleInject.dylib /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator/VideoCompressor.app/Frameworks
+2026-08-26T12:36:14.4936640Z 
+2026-08-26T12:36:14.5040760Z Copy /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator/VideoCompressor.app/Frameworks/XCUnit.framework /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/PrivateFrameworks/XCUnit.framework (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:14.5156330Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:14.5260850Z     builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -exclude Headers -exclude PrivateHeaders -exclude Modules -exclude \*.tbd -resolve-src-symlinks /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/PrivateFrameworks/XCUnit.framework /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator/VideoCompressor.app/Frameworks
+2026-08-26T12:36:14.5362870Z 
+2026-08-26T12:36:14.5471290Z Copy /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator/VideoCompressor.app/Frameworks/XCUIAutomation.framework /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Frameworks/XCUIAutomation.framework (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:14.5614130Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:14.5748150Z     builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -exclude Headers -exclude PrivateHeaders -exclude Modules -exclude \*.tbd -resolve-src-symlinks /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Frameworks/XCUIAutomation.framework /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator/VideoCompressor.app/Frameworks
+2026-08-26T12:36:14.5846270Z 
+2026-08-26T12:36:14.5955070Z Copy /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator/VideoCompressor.app/Frameworks/XCTestSupport.framework /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/PrivateFrameworks/XCTestSupport.framework (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:14.6090050Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:14.6193690Z     builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -exclude Headers -exclude PrivateHeaders -exclude Modules -exclude \*.tbd -resolve-src-symlinks /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/PrivateFrameworks/XCTestSupport.framework /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator/VideoCompressor.app/Frameworks
+2026-08-26T12:36:14.6296930Z 
+2026-08-26T12:36:14.6402970Z Copy /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator/VideoCompressor.app/Frameworks/XCTestCore.framework /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/PrivateFrameworks/XCTestCore.framework (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:14.6508730Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:14.6612500Z     builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -exclude Headers -exclude PrivateHeaders -exclude Modules -exclude \*.tbd -resolve-src-symlinks /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/PrivateFrameworks/XCTestCore.framework /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator/VideoCompressor.app/Frameworks
+2026-08-26T12:36:14.6721670Z 
+2026-08-26T12:36:14.6823670Z Copy /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator/VideoCompressor.app/Frameworks/XCTest.framework /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Frameworks/XCTest.framework (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:14.6928920Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:14.7052860Z     builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -exclude Headers -exclude PrivateHeaders -exclude Modules -exclude \*.tbd -resolve-src-symlinks /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Frameworks/XCTest.framework /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator/VideoCompressor.app/Frameworks
+2026-08-26T12:36:14.7157630Z 
+2026-08-26T12:36:14.7260960Z Copy /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator/VideoCompressor.app/Frameworks/XCTAutomationSupport.framework /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/PrivateFrameworks/XCTAutomationSupport.framework (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:14.7368810Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:14.7475630Z     builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -exclude Headers -exclude PrivateHeaders -exclude Modules -exclude \*.tbd -resolve-src-symlinks /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/PrivateFrameworks/XCTAutomationSupport.framework /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator/VideoCompressor.app/Frameworks
+2026-08-26T12:36:14.7578320Z 
+2026-08-26T12:36:14.7683750Z Copy /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator/VideoCompressor.app/Frameworks/Testing.framework /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Frameworks/Testing.framework (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:14.7789370Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:14.7895880Z     builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -exclude Headers -exclude PrivateHeaders -exclude Modules -exclude \*.tbd -resolve-src-symlinks /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Frameworks/Testing.framework /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator/VideoCompressor.app/Frameworks
+2026-08-26T12:36:14.8011250Z 
+2026-08-26T12:36:14.8128490Z CompileStoryboard /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Resources/LaunchScreen.storyboard (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:14.8236340Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:14.8341400Z     /Applications/Xcode_16.4.app/Contents/Developer/usr/bin/ibtool --errors --warnings --notices --module VideoCompressor --output-partial-info-plist /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/LaunchScreen-SBPartialInfo.plist --auto-activate-custom-fonts --target-device iphone --target-device ipad --minimum-deployment-target 16.0 --output-format human-readable-text /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Resources/LaunchScreen.storyboard --compilation-directory /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build
+2026-08-26T12:36:14.8444720Z 
+2026-08-26T12:36:14.8548860Z CompileAssetCatalogVariant thinned /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator/VideoCompressor.app /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Resources/Assets.xcassets (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:14.8659130Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:14.8771630Z     /Applications/Xcode_16.4.app/Contents/Developer/usr/bin/actool /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Resources/Assets.xcassets --compile /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/assetcatalog_output/thinned --output-format human-readable-text --notices --warnings --export-dependency-info /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/assetcatalog_dependencies_thinned --output-partial-info-plist /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/assetcatalog_generated_info.plist_thinned --app-icon AppIcon --accent-color AccentColor --compress-pngs --enable-on-demand-resources YES --filter-for-thinning-device-configuration iPhone17,3 --filter-for-device-os-version 18.5 --development-region en --target-device iphone --target-device ipad --minimum-deployment-target 16.0 --platform iphonesimulator
+2026-08-26T12:36:19.3749350Z /* com.apple.actool.compilation-results */
+2026-08-26T12:36:19.3853410Z /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/assetcatalog_generated_info.plist_thinned
+2026-08-26T12:36:19.3959080Z /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/assetcatalog_output/thinned/Assets.car
+2026-08-26T12:36:19.4030360Z 
+2026-08-26T12:36:19.4130790Z 
+2026-08-26T12:36:19.4233380Z SwiftDriver VideoCompressor normal arm64 com.apple.xcode.tools.swift.compiler (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:19.4336730Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:19.4458940Z     builtin-SwiftDriver -- /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name VideoCompressor -Onone -enforce-exclusivity\=checked @/Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/Objects-normal/arm64/VideoCompressor.SwiftFileList -DDEBUG -enable-bare-slash-regex -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator18.5.sdk -target arm64-apple-ios16.0-simulator -g -module-cache-path /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/ModuleCache.noindex -Xfrontend -serialize-debugging-options -profile-coverage-mapping -profile-generate -enable-testing -index-store-path /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Index.noindex/DataStore -swift-version 5 -I /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator -F /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator -c -j3 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/SDKStatCaches.noindex/iphonesimulator18.5-22F76-96ae0914227b19deccb34b33ba7b5dea.sdkstatcache -output-file-map /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/Objects-normal/arm64/VideoCompressor-OutputFileMap.json -use-frontend-parseable-output -save-temps -no-color-diagnostics -serialize-diagnostics -emit-dependencies -emit-module -emit-module-path /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/Objects-normal/arm64/VideoCompressor.swiftmodule -validate-clang-modules-once -clang-build-session-file /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/ModuleCache.noindex/Session.modulevalidation -Xcc -I/Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/swift-overrides.hmap -emit-const-values -Xfrontend -const-gather-protocols-file -Xfrontend /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/Objects-normal/arm64/VideoCompressor_const_extract_protocols.json -Xcc -iquote -Xcc /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/VideoCompressor-generated-files.hmap -Xcc -I/Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/VideoCompressor-own-target-headers.hmap -Xcc -I/Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/VideoCompressor-all-target-headers.hmap -Xcc -iquote -Xcc /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/VideoCompressor-project-headers.hmap -Xcc -I/Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator/include -Xcc -I/Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/DerivedSources-normal/arm64 -Xcc -I/Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/DerivedSources/arm64 -Xcc -I/Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/DerivedSources -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/Objects-normal/arm64/VideoCompressor-Swift.h -working-directory /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS -experimental-emit-module-separately -disable-cmo
+2026-08-26T12:36:19.4572690Z 
+2026-08-26T12:36:19.4674990Z SwiftEmitModule normal arm64 Emitting\ module\ for\ VideoCompressor (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:19.4779400Z EmitSwiftModule normal arm64 (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:19.4882570Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:19.4982070Z     
+2026-08-26T12:36:23.7175290Z 
+2026-08-26T12:36:23.7541770Z SwiftCompile normal arm64 Compiling\ ResultView.swift,\ SettingsStore.swift,\ SettingsView.swift,\ TempFileManager.swift,\ TranscodeEngine.swift,\ VideoCompressorApp.swift,\ VideoGeometry.swift,\ VideoInfoCard.swift,\ VideoInfoReader.swift,\ VideoItem.swift,\ VideoPicker.swift,\ GeneratedAssetSymbols.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/UI/Result/ResultView.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Settings/SettingsStore.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/UI/Settings/SettingsView.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Storage/TempFileManager.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Compression/TranscodeEngine.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/App/VideoCompressorApp.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Utilities/VideoGeometry.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/UI/Home/VideoInfoCard.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Compression/VideoInfoReader.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Models/VideoItem.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/UI/Home/VideoPicker.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/DerivedSources/GeneratedAssetSymbols.swift (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:23.7646560Z SwiftCompile normal arm64 /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/UI/Result/ResultView.swift (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:23.7748620Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:23.7849780Z     
+2026-08-26T12:36:34.5961000Z 
+2026-08-26T12:36:34.6061920Z SwiftCompile normal arm64 /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Settings/SettingsStore.swift (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:34.6161610Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:34.6264870Z     
+2026-08-26T12:36:34.6366370Z 
+2026-08-26T12:36:34.6467790Z SwiftCompile normal arm64 /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/UI/Settings/SettingsView.swift (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:34.6568180Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:34.6670200Z     
+2026-08-26T12:36:34.6771090Z 
+2026-08-26T12:36:34.6872810Z SwiftCompile normal arm64 /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Storage/TempFileManager.swift (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:34.6982840Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:34.7084180Z     
+2026-08-26T12:36:34.7184440Z 
+2026-08-26T12:36:34.7286160Z SwiftCompile normal arm64 /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Compression/TranscodeEngine.swift (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:34.7391070Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:34.7492280Z     
+2026-08-26T12:36:34.7610850Z 
+2026-08-26T12:36:34.7742230Z SwiftCompile normal arm64 /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/App/VideoCompressorApp.swift (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:34.7849420Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:34.7957890Z     
+2026-08-26T12:36:34.8068650Z 
+2026-08-26T12:36:34.8158550Z SwiftCompile normal arm64 /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Utilities/VideoGeometry.swift (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:34.8262020Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:34.8370120Z     
+2026-08-26T12:36:34.8471320Z 
+2026-08-26T12:36:34.8703480Z SwiftCompile normal arm64 /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/UI/Home/VideoInfoCard.swift (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:34.8706110Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:34.8830490Z     
+2026-08-26T12:36:34.8830950Z 
+2026-08-26T12:36:34.8831750Z SwiftCompile normal arm64 /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Compression/VideoInfoReader.swift (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:34.8958950Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:34.9079360Z     
+2026-08-26T12:36:34.9190150Z 
+2026-08-26T12:36:34.9300610Z SwiftCompile normal arm64 /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Models/VideoItem.swift (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:34.9403660Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:34.9505790Z     
+2026-08-26T12:36:34.9607490Z 
+2026-08-26T12:36:34.9713130Z SwiftCompile normal arm64 /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/UI/Home/VideoPicker.swift (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:34.9814950Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:34.9917370Z     
+2026-08-26T12:36:35.0019700Z 
+2026-08-26T12:36:35.0122350Z SwiftCompile normal arm64 /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/DerivedSources/GeneratedAssetSymbols.swift (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:35.0225430Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:35.0328310Z     
+2026-08-26T12:36:35.0430500Z 
+2026-08-26T12:36:35.0532960Z LinkStoryboards (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:35.0636060Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:35.0743660Z     /Applications/Xcode_16.4.app/Contents/Developer/usr/bin/ibtool --errors --warnings --notices --module VideoCompressor --target-device iphone --target-device ipad --minimum-deployment-target 16.0 --output-format human-readable-text --link /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator/VideoCompressor.app /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/LaunchScreen.storyboardc
+2026-08-26T12:36:35.0847030Z 
+2026-08-26T12:36:35.0948360Z LinkAssetCatalog /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Resources/Assets.xcassets (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:35.1050170Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:35.1156870Z     builtin-linkAssetCatalog --thinned /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/assetcatalog_output/thinned --thinned-dependencies /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/assetcatalog_dependencies_thinned --thinned-info-plist-content /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/assetcatalog_generated_info.plist_thinned --unthinned /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/assetcatalog_output/unthinned --unthinned-dependencies /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/assetcatalog_dependencies_unthinned --unthinned-info-plist-content /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/assetcatalog_generated_info.plist_unthinned --output /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator/VideoCompressor.app --plist-output /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/assetcatalog_generated_info.plist
+2026-08-26T12:36:35.1165730Z note: Emplaced /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator/VideoCompressor.app/Assets.car (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:35.1377630Z 
+2026-08-26T12:36:35.1433780Z SwiftCompile normal arm64 Compiling\ ContentView.swift,\ EmptyStateView.swift,\ ExportPresetEngine.swift,\ Formatters.swift,\ HistoryEntry.swift,\ HistoryStore.swift,\ HistoryView.swift,\ HomeView.swift,\ InfoRow.swift,\ PhotoLibraryService.swift,\ ProgressBar.swift,\ Resolution.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/UI/ContentView.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/UI/Components/EmptyStateView.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Compression/ExportPresetEngine.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Utilities/Formatters.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Models/HistoryEntry.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/History/HistoryStore.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/UI/History/HistoryView.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/UI/Home/HomeView.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/UI/Components/InfoRow.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Photos/PhotoLibraryService.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/UI/Components/ProgressBar.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Models/Resolution.swift (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:35.1550550Z Testing failed:
+2026-08-26T12:36:35.1551410Z SwiftCompile normal arm64 /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/UI/ContentView.swift (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:35.1663630Z 	'async' call in a function that does not support concurrency
+2026-08-26T12:36:35.1664090Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:35.1765740Z 	'async' call in a function that does not support concurrency
+2026-08-26T12:36:35.1766110Z     
+2026-08-26T12:36:35.1867280Z 	Command SwiftCompile failed with a nonzero exit code
+2026-08-26T12:36:35.1868600Z /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Photos/PhotoLibraryService.swift:40:17: error: 'async' call in a function that does not support concurrency
+2026-08-26T12:36:35.1971860Z 	Testing cancelled because the build failed.
+2026-08-26T12:36:35.1972280Z                 MainActor.run {
+2026-08-26T12:36:35.2074230Z 
+2026-08-26T12:36:35.2074590Z                 ^
+2026-08-26T12:36:35.2177380Z ** TEST FAILED **
+2026-08-26T12:36:35.2178240Z /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Photos/PhotoLibraryService.swift:62:17: error: 'async' call in a function that does not support concurrency
+2026-08-26T12:36:35.2279680Z 
+2026-08-26T12:36:35.2280020Z                 MainActor.run {
+2026-08-26T12:36:35.2380860Z 
+2026-08-26T12:36:35.2381210Z                 ^
+2026-08-26T12:36:35.2482360Z The following build commands failed:
+2026-08-26T12:36:35.2483490Z 
+2026-08-26T12:36:35.2515810Z 	SwiftCompile normal arm64 /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/UI/ContentView.swift (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:35.2517930Z SwiftCompile normal arm64 /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/UI/Components/EmptyStateView.swift (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:35.2525610Z 	SwiftCompile normal arm64 /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/UI/Components/EmptyStateView.swift (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:35.2527140Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:35.2531460Z 	SwiftCompile normal arm64 /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Compression/ExportPresetEngine.swift (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:35.2532610Z     
+2026-08-26T12:36:35.2537410Z 	SwiftCompile normal arm64 /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Utilities/Formatters.swift (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:35.2538730Z /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Photos/PhotoLibraryService.swift:40:17: error: 'async' call in a function that does not support concurrency
+2026-08-26T12:36:35.2544500Z 	SwiftCompile normal arm64 /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Models/HistoryEntry.swift (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:35.2546750Z                 MainActor.run {
+2026-08-26T12:36:35.2648420Z 	SwiftCompile normal arm64 /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/History/HistoryStore.swift (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:35.2649180Z                 ^
+2026-08-26T12:36:35.2750550Z 	SwiftCompile normal arm64 /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/UI/History/HistoryView.swift (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:35.2751870Z /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Photos/PhotoLibraryService.swift:62:17: error: 'async' call in a function that does not support concurrency
+2026-08-26T12:36:35.2853800Z 	SwiftCompile normal arm64 /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/UI/Home/HomeView.swift (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:35.2854510Z                 MainActor.run {
+2026-08-26T12:36:35.2957240Z 	SwiftCompile normal arm64 /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/UI/Components/InfoRow.swift (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:35.2957980Z                 ^
+2026-08-26T12:36:35.3060090Z 	SwiftCompile normal arm64 /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Photos/PhotoLibraryService.swift (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:35.3061140Z 
+2026-08-26T12:36:35.3167140Z 	SwiftCompile normal arm64 /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/UI/Components/ProgressBar.swift (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:35.3168990Z SwiftCompile normal arm64 /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Compression/ExportPresetEngine.swift (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:35.3270920Z 	SwiftCompile normal arm64 /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Models/Resolution.swift (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:35.3272000Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:35.3591230Z 	SwiftCompile normal arm64 Compiling\ ContentView.swift,\ EmptyStateView.swift,\ ExportPresetEngine.swift,\ Formatters.swift,\ HistoryEntry.swift,\ HistoryStore.swift,\ HistoryView.swift,\ HomeView.swift,\ InfoRow.swift,\ PhotoLibraryService.swift,\ ProgressBar.swift,\ Resolution.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/UI/ContentView.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/UI/Components/EmptyStateView.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Compression/ExportPresetEngine.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Utilities/Formatters.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Models/HistoryEntry.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/History/HistoryStore.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/UI/History/HistoryView.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/UI/Home/HomeView.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/UI/Components/InfoRow.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Photos/PhotoLibraryService.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/UI/Components/ProgressBar.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Models/Resolution.swift (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:35.3649370Z     
+2026-08-26T12:36:35.3759750Z 	SwiftCompile normal arm64 Compiling\ FormattersTests.swift,\ HistoryEntryTests.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressorTests/FormattersTests.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressorTests/HistoryEntryTests.swift (in target 'VideoCompressorTests' from project 'VideoCompressor')
+2026-08-26T12:36:35.3762310Z /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Photos/PhotoLibraryService.swift:40:17: error: 'async' call in a function that does not support concurrency
+2026-08-26T12:36:35.3864690Z 	Testing project VideoCompressor with scheme VideoCompressor
+2026-08-26T12:36:35.3872940Z                 MainActor.run {
+2026-08-26T12:36:35.3975530Z (15 failures)
+2026-08-26T12:36:35.3976000Z                 ^
+2026-08-26T12:36:35.4077100Z --- xcodebuild: WARNING: Using the first of multiple matching destinations:
+2026-08-26T12:36:35.4078070Z /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Photos/PhotoLibraryService.swift:62:17: error: 'async' call in a function that does not support concurrency
+2026-08-26T12:36:35.4179850Z { platform:iOS Simulator, arch:arm64, id:E514A76C-D366-4B28-A6F6-E62A57B237C3, OS:18.5, name:iPhone 16 }
+2026-08-26T12:36:35.4180400Z                 MainActor.run {
+2026-08-26T12:36:35.4281890Z { platform:iOS Simulator, arch:x86_64, id:E514A76C-D366-4B28-A6F6-E62A57B237C3, OS:18.5, name:iPhone 16 }
+2026-08-26T12:36:35.4282380Z                 ^
+2026-08-26T12:36:35.4384130Z ** CLEAN FAILED **
+2026-08-26T12:36:35.4385710Z 
+2026-08-26T12:36:35.4486370Z 
+2026-08-26T12:36:35.4487120Z SwiftCompile normal arm64 /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Utilities/Formatters.swift (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:35.4520960Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:35.4622100Z     
+2026-08-26T12:36:35.4724080Z /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Photos/PhotoLibraryService.swift:40:17: error: 'async' call in a function that does not support concurrency
+2026-08-26T12:36:35.4855400Z                 MainActor.run {
+2026-08-26T12:36:35.4957460Z                 ^
+2026-08-26T12:36:35.5059140Z /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Photos/PhotoLibraryService.swift:62:17: error: 'async' call in a function that does not support concurrency
+2026-08-26T12:36:35.5160730Z                 MainActor.run {
+2026-08-26T12:36:35.5261830Z                 ^
+2026-08-26T12:36:35.5362640Z 
+2026-08-26T12:36:35.5465660Z SwiftCompile normal arm64 /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Models/HistoryEntry.swift (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:35.5568290Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:35.5669580Z     
+2026-08-26T12:36:35.5772350Z /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Photos/PhotoLibraryService.swift:40:17: error: 'async' call in a function that does not support concurrency
+2026-08-26T12:36:35.5875660Z                 MainActor.run {
+2026-08-26T12:36:35.5977220Z                 ^
+2026-08-26T12:36:35.6093180Z /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Photos/PhotoLibraryService.swift:62:17: error: 'async' call in a function that does not support concurrency
+2026-08-26T12:36:35.6210040Z                 MainActor.run {
+2026-08-26T12:36:35.6372510Z                 ^
+2026-08-26T12:36:35.6490680Z 
+2026-08-26T12:36:35.6821970Z SwiftCompile normal arm64 /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/History/HistoryStore.swift (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:35.6924910Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:35.7027960Z     
+2026-08-26T12:36:35.7130510Z /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Photos/PhotoLibraryService.swift:40:17: error: 'async' call in a function that does not support concurrency
+2026-08-26T12:36:35.7237100Z                 MainActor.run {
+2026-08-26T12:36:35.7338070Z                 ^
+2026-08-26T12:36:35.7440790Z /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Photos/PhotoLibraryService.swift:62:17: error: 'async' call in a function that does not support concurrency
+2026-08-26T12:36:35.7542820Z                 MainActor.run {
+2026-08-26T12:36:35.7644100Z                 ^
+2026-08-26T12:36:35.7744870Z 
+2026-08-26T12:36:35.7846580Z SwiftCompile normal arm64 /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/UI/History/HistoryView.swift (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:35.8662240Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:35.8692360Z     
+2026-08-26T12:36:35.8796060Z /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Photos/PhotoLibraryService.swift:40:17: error: 'async' call in a function that does not support concurrency
+2026-08-26T12:36:35.8901040Z                 MainActor.run {
+2026-08-26T12:36:35.8972510Z                 ^
+2026-08-26T12:36:35.9074080Z /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Photos/PhotoLibraryService.swift:62:17: error: 'async' call in a function that does not support concurrency
+2026-08-26T12:36:35.9195610Z                 MainActor.run {
+2026-08-26T12:36:35.9296940Z                 ^
+2026-08-26T12:36:35.9345260Z 
+2026-08-26T12:36:35.9346420Z SwiftCompile normal arm64 /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/UI/Home/HomeView.swift (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:35.9347420Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:35.9347900Z     
+2026-08-26T12:36:35.9349010Z /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Photos/PhotoLibraryService.swift:40:17: error: 'async' call in a function that does not support concurrency
+2026-08-26T12:36:35.9349980Z                 MainActor.run {
+2026-08-26T12:36:35.9350320Z                 ^
+2026-08-26T12:36:35.9351030Z /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Photos/PhotoLibraryService.swift:62:17: error: 'async' call in a function that does not support concurrency
+2026-08-26T12:36:35.9351940Z                 MainActor.run {
+2026-08-26T12:36:35.9352270Z                 ^
+2026-08-26T12:36:35.9352520Z 
+2026-08-26T12:36:35.9353200Z SwiftCompile normal arm64 /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/UI/Components/InfoRow.swift (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:35.9354210Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:35.9354580Z     
+2026-08-26T12:36:35.9355370Z /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Photos/PhotoLibraryService.swift:40:17: error: 'async' call in a function that does not support concurrency
+2026-08-26T12:36:35.9356290Z                 MainActor.run {
+2026-08-26T12:36:35.9356860Z                 ^
+2026-08-26T12:36:35.9357640Z /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Photos/PhotoLibraryService.swift:62:17: error: 'async' call in a function that does not support concurrency
+2026-08-26T12:36:35.9358640Z                 MainActor.run {
+2026-08-26T12:36:35.9359020Z                 ^
+2026-08-26T12:36:35.9359280Z 
+2026-08-26T12:36:35.9360100Z SwiftCompile normal arm64 /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Photos/PhotoLibraryService.swift (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:35.9361220Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:35.9361740Z     
+2026-08-26T12:36:35.9362620Z /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Photos/PhotoLibraryService.swift:40:17: error: 'async' call in a function that does not support concurrency
+2026-08-26T12:36:35.9363560Z                 MainActor.run {
+2026-08-26T12:36:35.9364010Z                 ^
+2026-08-26T12:36:35.9364970Z /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Photos/PhotoLibraryService.swift:62:17: error: 'async' call in a function that does not support concurrency
+2026-08-26T12:36:35.9365910Z                 MainActor.run {
+2026-08-26T12:36:35.9366390Z                 ^
+2026-08-26T12:36:35.9366740Z 
+2026-08-26T12:36:35.9367470Z SwiftCompile normal arm64 /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/UI/Components/ProgressBar.swift (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:35.9368400Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:35.9368920Z     
+2026-08-26T12:36:35.9369720Z /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Photos/PhotoLibraryService.swift:40:17: error: 'async' call in a function that does not support concurrency
+2026-08-26T12:36:35.9370530Z                 MainActor.run {
+2026-08-26T12:36:35.9370860Z                 ^
+2026-08-26T12:36:35.9371770Z /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Photos/PhotoLibraryService.swift:62:17: error: 'async' call in a function that does not support concurrency
+2026-08-26T12:36:35.9372670Z                 MainActor.run {
+2026-08-26T12:36:35.9373100Z                 ^
+2026-08-26T12:36:35.9373580Z 
+2026-08-26T12:36:35.9374280Z SwiftCompile normal arm64 /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Models/Resolution.swift (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:35.9375240Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:35.9375670Z     
+2026-08-26T12:36:35.9376710Z /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Photos/PhotoLibraryService.swift:40:17: error: 'async' call in a function that does not support concurrency
+2026-08-26T12:36:35.9377570Z                 MainActor.run {
+2026-08-26T12:36:35.9377900Z                 ^
+2026-08-26T12:36:35.9378730Z /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Photos/PhotoLibraryService.swift:62:17: error: 'async' call in a function that does not support concurrency
+2026-08-26T12:36:35.9379540Z                 MainActor.run {
+2026-08-26T12:36:35.9379880Z                 ^
+2026-08-26T12:36:35.9380120Z 
+2026-08-26T12:36:35.9380360Z Failed frontend command:
+2026-08-26T12:36:35.9424790Z /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swift-frontend -frontend -c /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Models/AppError.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/UI/Components/AsyncThumbnail.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/UI/Result/BatchResultView.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Compression/BitrateCalculator.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Compression/CodecSupport.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Models/CompressionProfile.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/UI/Progress/CompressionProgressView.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Models/CompressionResult.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Compression/CompressionService.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/UI/Home/CompressionSession.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/UI/Home/CompressionSettingsView.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Models/CompressionTask.swift -primary-file /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/UI/ContentView.swift -primary-file /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/UI/Components/EmptyStateView.swift -primary-file /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Compression/ExportPresetEngine.swift -primary-file /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Utilities/Formatters.swift -primary-file /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Models/HistoryEntry.swift -primary-file /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/History/HistoryStore.swift -primary-file /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/UI/History/HistoryView.swift -primary-file /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/UI/Home/HomeView.swift -primary-file /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/UI/Components/InfoRow.swift -primary-file /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Photos/PhotoLibraryService.swift -primary-file /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/UI/Components/ProgressBar.swift -primary-file /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Models/Resolution.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/UI/Result/ResultView.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Settings/SettingsStore.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/UI/Settings/SettingsView.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Storage/TempFileManager.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Compression/TranscodeEngine.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/App/VideoCompressorApp.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Utilities/VideoGeometry.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/UI/Home/VideoInfoCard.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Compression/VideoInfoReader.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Models/VideoItem.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/UI/Home/VideoPicker.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/DerivedSources/GeneratedAssetSymbols.swift -supplementary-output-file-map /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/Objects-normal/arm64/supplementaryOutputs-2 -target arm64-apple-ios16.0-simulator -Xllvm -aarch64-use-tbi -enable-objc-interop -sdk /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator18.5.sdk -I /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator -F /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator -no-color-diagnostics -enable-testing -g -debug-info-format\=dwarf -dwarf-version\=4 -module-cache-path /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/ModuleCache.noindex -profile-generate -profile-coverage-mapping -swift-version 5 -enforce-exclusivity\=checked -Onone -D DEBUG -serialize-debugging-options -const-gather-protocols-file /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/Objects-normal/arm64/VideoCompressor_const_extract_protocols.json -enable-experimental-feature DebugDescriptionMacro -enable-bare-slash-regex -empty-abi-descriptor -validate-clang-modules-once -clang-build-session-file /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/ModuleCache.noindex/Session.modulevalidation -Xcc -working-directory -Xcc /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS -resource-dir /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift -enable-anonymous-context-mangled-names -file-compilation-dir /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS -Xcc -ivfsstatcache -Xcc /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/SDKStatCaches.noindex/iphonesimulator18.5-22F76-96ae0914227b19deccb34b33ba7b5dea.sdkstatcache -Xcc -I/Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/swift-overrides.hmap -Xcc -iquote -Xcc /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/VideoCompressor-generated-files.hmap -Xcc -I/Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/VideoCompressor-own-target-headers.hmap -Xcc -I/Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/VideoCompressor-all-target-headers.hmap -Xcc -iquote -Xcc /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/VideoCompressor-project-headers.hmap -Xcc -I/Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator/include -Xcc -I/Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/DerivedSources-normal/arm64 -Xcc -I/Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/DerivedSources/arm64 -Xcc -I/Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/DerivedSources -Xcc -DDEBUG\=1 -module-name VideoCompressor -frontend-parseable-output -disable-clang-spi -target-sdk-version 18.5 -target-sdk-name iphonesimulator18.5 -external-plugin-path /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/lib/swift/host/plugins\#/Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/swift-plugin-server -external-plugin-path /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/local/lib/swift/host/plugins\#/Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/swift-plugin-server -in-process-plugin-server-path /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/libSwiftInProcPluginServer.dylib -plugin-path /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins -plugin-path /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/local/lib/swift/host/plugins -o /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/Objects-normal/arm64/ContentView.o -o /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/Objects-normal/arm64/EmptyStateView.o -o /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/Objects-normal/arm64/ExportPresetEngine.o -o /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/Objects-normal/arm64/Formatters.o -o /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/Objects-normal/arm64/HistoryEntry.o -o /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/Objects-normal/arm64/HistoryStore.o -o /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/Objects-normal/arm64/HistoryView.o -o /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/Objects-normal/arm64/HomeView.o -o /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/Objects-normal/arm64/InfoRow.o -o /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/Objects-normal/arm64/PhotoLibraryService.o -o /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/Objects-normal/arm64/ProgressBar.o -o /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/Objects-normal/arm64/Resolution.o -index-unit-output-path /VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/Objects-normal/arm64/ContentView.o -index-unit-output-path /VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/Objects-normal/arm64/EmptyStateView.o -index-unit-output-path /VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/Objects-normal/arm64/ExportPresetEngine.o -index-unit-output-path /VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/Objects-normal/arm64/Formatters.o -index-unit-output-path /VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/Objects-normal/arm64/HistoryEntry.o -index-unit-output-path /VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/Objects-normal/arm64/HistoryStore.o -index-unit-output-path /VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/Objects-normal/arm64/HistoryView.o -index-unit-output-path /VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/Objects-normal/arm64/HomeView.o -index-unit-output-path /VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/Objects-normal/arm64/InfoRow.o -index-unit-output-path /VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/Objects-normal/arm64/PhotoLibraryService.o -index-unit-output-path /VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/Objects-normal/arm64/ProgressBar.o -index-unit-output-path /VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/Objects-normal/arm64/Resolution.o -index-store-path /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Index.noindex/DataStore -index-system-modules
+2026-08-26T12:36:35.9486460Z ProcessInfoPlistFile /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator/VideoCompressor.app/Info.plist /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Resources/Info.plist (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:35.9487820Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:35.9491100Z     builtin-infoPlistUtility /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Resources/Info.plist -producttype com.apple.product-type.application -genpkginfo /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator/VideoCompressor.app/PkgInfo -expandbuildsettings -format binary -platform iphonesimulator -additionalcontentfile /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/LaunchScreen-SBPartialInfo.plist -additionalcontentfile /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/assetcatalog_generated_info.plist -o /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator/VideoCompressor.app/Info.plist
+2026-08-26T12:36:35.9495300Z 
+2026-08-26T12:36:35.9495800Z SwiftDriverJobDiscovery normal arm64 Emitting module for VideoCompressor (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:35.9496300Z 
+2026-08-26T12:36:35.9496760Z SwiftDriver\ Compilation\ Requirements VideoCompressor normal arm64 com.apple.xcode.tools.swift.compiler (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:35.9497570Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:35.9516730Z     builtin-Swift-Compilation-Requirements -- /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name VideoCompressor -Onone -enforce-exclusivity\=checked @/Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/Objects-normal/arm64/VideoCompressor.SwiftFileList -DDEBUG -enable-bare-slash-regex -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator18.5.sdk -target arm64-apple-ios16.0-simulator -g -module-cache-path /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/ModuleCache.noindex -Xfrontend -serialize-debugging-options -profile-coverage-mapping -profile-generate -enable-testing -index-store-path /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Index.noindex/DataStore -swift-version 5 -I /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator -F /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator -c -j3 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/SDKStatCaches.noindex/iphonesimulator18.5-22F76-96ae0914227b19deccb34b33ba7b5dea.sdkstatcache -output-file-map /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/Objects-normal/arm64/VideoCompressor-OutputFileMap.json -use-frontend-parseable-output -save-temps -no-color-diagnostics -serialize-diagnostics -emit-dependencies -emit-module -emit-module-path /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/Objects-normal/arm64/VideoCompressor.swiftmodule -validate-clang-modules-once -clang-build-session-file /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/ModuleCache.noindex/Session.modulevalidation -Xcc -I/Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/swift-overrides.hmap -emit-const-values -Xfrontend -const-gather-protocols-file -Xfrontend /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/Objects-normal/arm64/VideoCompressor_const_extract_protocols.json -Xcc -iquote -Xcc /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/VideoCompressor-generated-files.hmap -Xcc -I/Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/VideoCompressor-own-target-headers.hmap -Xcc -I/Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/VideoCompressor-all-target-headers.hmap -Xcc -iquote -Xcc /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/VideoCompressor-project-headers.hmap -Xcc -I/Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator/include -Xcc -I/Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/DerivedSources-normal/arm64 -Xcc -I/Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/DerivedSources/arm64 -Xcc -I/Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/DerivedSources -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/Objects-normal/arm64/VideoCompressor-Swift.h -working-directory /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS -experimental-emit-module-separately -disable-cmo
+2026-08-26T12:36:35.9541980Z 
+2026-08-26T12:36:35.9547650Z SwiftCompile normal arm64 Compiling\ AppError.swift,\ AsyncThumbnail.swift,\ BatchResultView.swift,\ BitrateCalculator.swift,\ CodecSupport.swift,\ CompressionProfile.swift,\ CompressionProgressView.swift,\ CompressionResult.swift,\ CompressionService.swift,\ CompressionSession.swift,\ CompressionSettingsView.swift,\ CompressionTask.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Models/AppError.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/UI/Components/AsyncThumbnail.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/UI/Result/BatchResultView.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Compression/BitrateCalculator.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Compression/CodecSupport.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Models/CompressionProfile.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/UI/Progress/CompressionProgressView.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Models/CompressionResult.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Compression/CompressionService.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/UI/Home/CompressionSession.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/UI/Home/CompressionSettingsView.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Models/CompressionTask.swift (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:35.9554010Z 
+2026-08-26T12:36:35.9554610Z SwiftCompile normal arm64 /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Models/AppError.swift (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:35.9555380Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:35.9555650Z     
+2026-08-26T12:36:35.9555780Z 
+2026-08-26T12:36:35.9556440Z SwiftCompile normal arm64 /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/UI/Components/AsyncThumbnail.swift (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:35.9557320Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:35.9557630Z     
+2026-08-26T12:36:35.9557750Z 
+2026-08-26T12:36:35.9558320Z SwiftCompile normal arm64 /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/UI/Result/BatchResultView.swift (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:35.9559120Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:35.9559480Z     
+2026-08-26T12:36:35.9559560Z 
+2026-08-26T12:36:35.9560110Z SwiftCompile normal arm64 /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Compression/BitrateCalculator.swift (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:35.9560900Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:35.9561210Z     
+2026-08-26T12:36:35.9561320Z 
+2026-08-26T12:36:35.9561840Z SwiftCompile normal arm64 /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Compression/CodecSupport.swift (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:35.9562610Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:35.9562910Z     
+2026-08-26T12:36:35.9562980Z 
+2026-08-26T12:36:35.9563550Z SwiftCompile normal arm64 /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Models/CompressionProfile.swift (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:35.9564710Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:35.9565090Z     
+2026-08-26T12:36:35.9565170Z 
+2026-08-26T12:36:35.9565720Z SwiftCompile normal arm64 /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/UI/Progress/CompressionProgressView.swift (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:35.9566520Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:35.9566910Z     
+2026-08-26T12:36:35.9566980Z 
+2026-08-26T12:36:35.9567540Z SwiftCompile normal arm64 /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Models/CompressionResult.swift (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:35.9568270Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:35.9568540Z     
+2026-08-26T12:36:35.9568610Z 
+2026-08-26T12:36:35.9569160Z SwiftCompile normal arm64 /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Compression/CompressionService.swift (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:35.9569930Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:35.9570190Z     
+2026-08-26T12:36:35.9570250Z 
+2026-08-26T12:36:35.9570790Z SwiftCompile normal arm64 /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/UI/Home/CompressionSession.swift (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:35.9571500Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:35.9571760Z     
+2026-08-26T12:36:35.9571820Z 
+2026-08-26T12:36:35.9572370Z SwiftCompile normal arm64 /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/UI/Home/CompressionSettingsView.swift (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:35.9573110Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:35.9573410Z     
+2026-08-26T12:36:35.9573490Z 
+2026-08-26T12:36:35.9574040Z SwiftCompile normal arm64 /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressor/Models/CompressionTask.swift (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:35.9574790Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:35.9575050Z     
+2026-08-26T12:36:35.9575120Z 
+2026-08-26T12:36:35.9576670Z SwiftMergeGeneratedHeaders /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/DerivedSources/VideoCompressor-Swift.h /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/Objects-normal/arm64/VideoCompressor-Swift.h (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:35.9578380Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:35.9579980Z     builtin-swiftHeaderTool -arch arm64 /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/Objects-normal/arm64/VideoCompressor-Swift.h -o /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/DerivedSources/VideoCompressor-Swift.h
+2026-08-26T12:36:35.9581450Z 
+2026-08-26T12:36:35.9582650Z SwiftDriverJobDiscovery normal arm64 Compiling AppError.swift, AsyncThumbnail.swift, BatchResultView.swift, BitrateCalculator.swift, CodecSupport.swift, CompressionProfile.swift, CompressionProgressView.swift, CompressionResult.swift, CompressionService.swift, CompressionSession.swift, CompressionSettingsView.swift, CompressionTask.swift (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:35.9583910Z 
+2026-08-26T12:36:35.9585240Z Copy /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator/VideoCompressor.swiftmodule/arm64-apple-ios-simulator.swiftmodule /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/Objects-normal/arm64/VideoCompressor.swiftmodule (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:35.9587170Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:35.9588880Z     builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/Objects-normal/arm64/VideoCompressor.swiftmodule /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator/VideoCompressor.swiftmodule/arm64-apple-ios-simulator.swiftmodule
+2026-08-26T12:36:35.9590400Z 
+2026-08-26T12:36:35.9591730Z Copy /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator/VideoCompressor.swiftmodule/arm64-apple-ios-simulator.swiftdoc /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/Objects-normal/arm64/VideoCompressor.swiftdoc (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:35.9593250Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:35.9594970Z     builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/Objects-normal/arm64/VideoCompressor.swiftdoc /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator/VideoCompressor.swiftmodule/arm64-apple-ios-simulator.swiftdoc
+2026-08-26T12:36:35.9596490Z 
+2026-08-26T12:36:35.9597790Z Copy /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator/VideoCompressor.swiftmodule/arm64-apple-ios-simulator.abi.json /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/Objects-normal/arm64/VideoCompressor.abi.json (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:35.9599540Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:35.9601160Z     builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/Objects-normal/arm64/VideoCompressor.abi.json /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator/VideoCompressor.swiftmodule/arm64-apple-ios-simulator.abi.json
+2026-08-26T12:36:35.9602650Z 
+2026-08-26T12:36:35.9604000Z Copy /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator/VideoCompressor.swiftmodule/Project/arm64-apple-ios-simulator.swiftsourceinfo /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/Objects-normal/arm64/VideoCompressor.swiftsourceinfo (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:35.9605550Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:35.9607230Z     builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressor.build/Objects-normal/arm64/VideoCompressor.swiftsourceinfo /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator/VideoCompressor.swiftmodule/Project/arm64-apple-ios-simulator.swiftsourceinfo
+2026-08-26T12:36:35.9609000Z 
+2026-08-26T12:36:35.9609510Z SwiftDriver VideoCompressorTests normal arm64 com.apple.xcode.tools.swift.compiler (in target 'VideoCompressorTests' from project 'VideoCompressor')
+2026-08-26T12:36:35.9610130Z     cd /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:35.9626650Z     builtin-SwiftDriver -- /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name VideoCompressorTests -Onone -enforce-exclusivity\=checked @/Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressorTests.build/Objects-normal/arm64/VideoCompressorTests.SwiftFileList -DDEBUG -plugin-path /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing -enable-bare-slash-regex -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator18.5.sdk -target arm64-apple-ios16.0-simulator -g -module-cache-path /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/ModuleCache.noindex -Xfrontend -serialize-debugging-options -profile-coverage-mapping -profile-generate -enable-testing -index-store-path /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Index.noindex/DataStore -swift-version 5 -I /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator -I /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/usr/lib -F /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator -F /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Frameworks -F /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator18.5.sdk/Developer/Library/Frameworks -c -j3 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/SDKStatCaches.noindex/iphonesimulator18.5-22F76-96ae0914227b19deccb34b33ba7b5dea.sdkstatcache -output-file-map /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressorTests.build/Objects-normal/arm64/VideoCompressorTests-OutputFileMap.json -use-frontend-parseable-output -save-temps -no-color-diagnostics -serialize-diagnostics -emit-dependencies -emit-module -emit-module-path /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressorTests.build/Objects-normal/arm64/VideoCompressorTests.swiftmodule -validate-clang-modules-once -clang-build-session-file /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/ModuleCache.noindex/Session.modulevalidation -Xcc -I/Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressorTests.build/swift-overrides.hmap -emit-const-values -Xfrontend -const-gather-protocols-file -Xfrontend /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressorTests.build/Objects-normal/arm64/VideoCompressorTests_const_extract_protocols.json -Xcc -iquote -Xcc /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressorTests.build/VideoCompressorTests-generated-files.hmap -Xcc -I/Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressorTests.build/VideoCompressorTests-own-target-headers.hmap -Xcc -I/Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressorTests.build/VideoCompressorTests-all-target-headers.hmap -Xcc -iquote -Xcc /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressorTests.build/VideoCompressorTests-project-headers.hmap -Xcc -I/Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Products/Debug-iphonesimulator/include -Xcc -I/Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressorTests.build/DerivedSources-normal/arm64 -Xcc -I/Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressorTests.build/DerivedSources/arm64 -Xcc -I/Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressorTests.build/DerivedSources -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Build/Intermediates.noindex/VideoCompressor.build/Debug-iphonesimulator/VideoCompressorTests.build/Objects-normal/arm64/VideoCompressorTests-Swift.h -working-directory /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS -experimental-emit-module-separately -disable-cmo
+2026-08-26T12:36:35.9645100Z 
+2026-08-26T12:36:35.9646170Z SwiftDriverJobDiscovery normal arm64 Compiling ResultView.swift, SettingsStore.swift, SettingsView.swift, TempFileManager.swift, TranscodeEngine.swift, VideoCompressorApp.swift, VideoGeometry.swift, VideoInfoCard.swift, VideoInfoReader.swift, VideoItem.swift, VideoPicker.swift, GeneratedAssetSymbols.swift (in target 'VideoCompressor' from project 'VideoCompressor')
+2026-08-26T12:36:35.9647360Z 
+2026-08-26T12:36:35.9647750Z SwiftEmitModule normal arm64 Emitting\ module\ for\ VideoCompressorTests (in target 'VideoCompressorTests' from project 'VideoCompressor')
+2026-08-26T12:36:35.9648230Z 
+2026-08-26T12:36:35.9648970Z SwiftCompile normal arm64 Compiling\ TempFileManagerTests.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressorTests/TempFileManagerTests.swift (in target 'VideoCompressorTests' from project 'VideoCompressor')
+2026-08-26T12:36:35.9649740Z 
+2026-08-26T12:36:35.9650750Z SwiftCompile normal arm64 Compiling\ FormattersTests.swift,\ HistoryEntryTests.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressorTests/FormattersTests.swift /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/VideoCompressorTests/HistoryEntryTests.swift (in target 'VideoCompressorTests' from project 'VideoCompressor')
+2026-08-26T12:36:35.9652230Z Command SwiftCompile failed with a nonzero exit code
+2026-08-26T12:36:35.9652500Z 
+2026-08-26T12:36:35.9652500Z 
+2026-08-26T12:36:35.9652590Z Test session results, code coverage, and logs:
+2026-08-26T12:36:35.9653090Z 	/Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Logs/Test/Test-VideoCompressor-2026.08.26_12-36-04-+0000.xcresult
+2026-08-26T12:36:35.9653510Z 
+2026-08-26T12:36:35.9653610Z ComputePackagePrebuildTargetDependencyGraph
+2026-08-26T12:36:35.9653800Z 
+2026-08-26T12:36:35.9653860Z CreateBuildRequest
+2026-08-26T12:36:35.9653960Z 
+2026-08-26T12:36:35.9654020Z SendProjectDescription
+2026-08-26T12:36:35.9654130Z 
+2026-08-26T12:36:35.9654200Z CreateBuildOperation
+2026-08-26T12:36:35.9654660Z 
+2026-08-26T12:36:35.9654670Z 
+2026-08-26T12:36:35.9654740Z Result bundle written to path:
+2026-08-26T12:36:35.9655200Z 	/Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS/build/Logs/Test/Test-VideoCompressor-2026.08.26_12-36-04-+0000.xcresult
+2026-08-26T12:36:35.9655610Z 
+2026-08-26T12:36:35.9665460Z ##[error]Process completed with exit code 65.
+2026-08-26T12:36:36.0355960Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+2026-08-26T12:36:36.0357380Z ##[group]Run actions/upload-artifact@v4
+2026-08-26T12:36:36.0357580Z with:
+2026-08-26T12:36:36.0357710Z   name: build-logs
+2026-08-26T12:36:36.0357860Z   path: build/**/*.log
+2026-08-26T12:36:36.0358340Z   if-no-files-found: warn
+2026-08-26T12:36:36.0358540Z   compression-level: 6
+2026-08-26T12:36:36.0358700Z   overwrite: false
+2026-08-26T12:36:36.0358860Z   include-hidden-files: false
+2026-08-26T12:36:36.0359080Z ##[endgroup]
+2026-08-26T12:36:36.8916600Z (node:5185) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-08-26T12:36:36.9017930Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-08-26T12:36:37.1621850Z ##[warning]No files were found with the provided path: build/**/*.log. No artifacts will be uploaded.
+2026-08-26T12:36:37.1935510Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+2026-08-26T12:36:37.1936620Z Post job cleanup.
+2026-08-26T12:36:37.3552900Z [command]/opt/homebrew/bin/git version
+2026-08-26T12:36:37.3864580Z git version 2.55.0
+2026-08-26T12:36:37.4453140Z Copying '/Users/runner/.gitconfig' to '/Users/runner/work/_temp/208a1e3c-02ea-49c5-a1d1-77efc3eec65b/.gitconfig'
+2026-08-26T12:36:37.4603570Z Temporarily overriding HOME='/Users/runner/work/_temp/208a1e3c-02ea-49c5-a1d1-77efc3eec65b' before making global git config changes
+2026-08-26T12:36:37.4713010Z Adding repository directory to the temporary git global config as a safe directory
+2026-08-26T12:36:37.4841430Z [command]/opt/homebrew/bin/git config --global --add safe.directory /Users/runner/work/VideoCompressor-iOS/VideoCompressor-iOS
+2026-08-26T12:36:37.5171650Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-08-26T12:36:37.5477510Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-08-26T12:36:37.7188370Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-08-26T12:36:37.7290730Z http.https://github.com/.extraheader
+2026-08-26T12:36:37.7592980Z [command]/opt/homebrew/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-08-26T12:36:37.7898900Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-08-26T12:36:37.9314080Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-08-26T12:36:37.9623050Z [command]/opt/homebrew/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-08-26T12:36:38.1444090Z Cleaning up orphan processes
+2026-08-26T12:36:39.3492550Z Terminate orphan process: pid (3967) (ibtoold)
+2026-08-26T12:36:39.4367190Z Terminate orphan process: pid (3966) (ibtoold)
+2026-08-26T12:36:40.3421520Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/upload-artifact@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
