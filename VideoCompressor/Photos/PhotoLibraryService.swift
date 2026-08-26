@@ -10,9 +10,12 @@ import Combine
 ///    因此删除操作才申请 readWrite，避免向用户无谓请求完全访问。
 /// 3. 必须先保存成功，再删除原片；任何失败都返回错误而非崩溃。
 ///
-/// 该类故意不标注 `@MainActor`：Photos 回调可能来自任意后台队列，
-/// 我们只在必要时通过 `MainActor.run` / `DispatchQueue.main.async` 回到主线程，
-/// 避免 Swift 并发隔离导致的真机线程/执行器不匹配闪退。
+/// 本类标注 `@MainActor`：Photos 的授权弹窗与 `performChanges` 回调都必须在主线程，
+/// 且 `PHPhotoLibrary.requestAuthorization` 在 @MainActor 上下文直接 `await` 即可（CI 的 Swift 5.10
+/// 不支持 `MainActor.run` 的 async 闭包重载，故直接在主线程上下文调用）。
+/// 对于 `performChanges` 的异步回调（可能来自后台队列），统一用 `Task { @MainActor in … }`
+/// 回到主线程后再 `resume` continuation，避免跨线程/执行器不匹配导致的真机闪退。
+@MainActor
 final class PhotoLibraryService {
     static let shared = PhotoLibraryService()
 
@@ -40,13 +43,10 @@ final class PhotoLibraryService {
         // 0. 保存前校验输出文件（存在 / 可读 / 大小 > 0 / 类型受支持）
         try validateOutputFile(fileURL)
 
-        // 1. 仅申请 addOnly 权限（不无谓请求 readWrite）。
-        //    authorizationStatus 可在任意线程查询；系统授权弹窗必须在主线程显示。
+        // 1. 仅申请 addOnly 权限（不无谓请求 readWrite）
         var status = addStatus()
         if status == .notDetermined {
-            status = await MainActor.run {
-                await PHPhotoLibrary.requestAuthorization(for: .addOnly)
-            }
+            status = await PHPhotoLibrary.requestAuthorization(for: .addOnly)
         }
 
         // 2. 完整处理五种授权状态
@@ -72,14 +72,12 @@ final class PhotoLibraryService {
                 let request = PHAssetCreationRequest.creationRequestForAssetFromVideo(atFileURL: fileURL)
                 placeholderID = request?.placeholderForCreatedAsset?.localIdentifier
             }) { success, error in
-                // 在回调里先把 Error 转为字符串，避免把非 Sendable 对象传入主线程 Task
-                let detail = error?.localizedDescription
                 // 通过主线程 Task 回到主线程后再 resume，避免跨线程/执行器问题
                 Task { @MainActor in
                     if success, let id = placeholderID, !id.isEmpty {
                         cont.resume(returning: id)
-                    } else if let detail = detail {
-                        cont.resume(throwing: AppError.saveToPhotoFailed(detail))
+                    } else if let error = error {
+                        cont.resume(throwing: AppError.saveToPhotoFailed(error.localizedDescription))
                     } else if placeholderID == nil {
                         // creationRequest 返回 nil：文件无法被照片 app 导入（损坏/格式不符）
                         cont.resume(throwing: AppError.saveToPhotoFailed("照片图库无法导入该视频文件"))
@@ -99,12 +97,10 @@ final class PhotoLibraryService {
     func deleteOriginal(localIdentifier: String) async throws {
         guard !localIdentifier.isEmpty else { return }
 
-        // 删除需要 readWrite 权限。authorizationStatus 任意线程可查；授权弹窗必须在主线程。
+        // 删除需要 readWrite 权限
         var status = readWriteStatus()
         if status == .notDetermined {
-            status = await MainActor.run {
-                await PHPhotoLibrary.requestAuthorization(for: .readWrite)
-            }
+            status = await PHPhotoLibrary.requestAuthorization(for: .readWrite)
         }
 
         switch status {
@@ -127,12 +123,11 @@ final class PhotoLibraryService {
             PHPhotoLibrary.shared().performChanges({
                 PHAssetChangeRequest.deleteAssets(assets)
             }) { success, error in
-                let detail = error?.localizedDescription
                 Task { @MainActor in
                     if success {
                         cont.resume()
                     } else {
-                        cont.resume(throwing: AppError.deleteOriginalFailed(detail ?? "删除原视频失败"))
+                        cont.resume(throwing: AppError.deleteOriginalFailed(error?.localizedDescription ?? "删除原视频失败"))
                     }
                 }
             }
