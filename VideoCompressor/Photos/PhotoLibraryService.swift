@@ -25,18 +25,26 @@ final class PhotoLibraryService {
         guard status == .authorized || status == .limited else {
             throw AppError.photoPermissionDenied
         }
+        guard FileManager.default.fileExists(atPath: fileURL.path) else {
+            throw AppError.saveToPhotoFailed("压缩输出文件不存在")
+        }
         return try await withCheckedThrowingContinuation { (cont: CheckedContinuation<String, Error>) in
+            // 在 changes block 内直接拿到 placeholder 的 localIdentifier，避免保存后反查相册不可靠
+            var placeholderID: String?
             PHPhotoLibrary.shared().performChanges({
-                PHAssetCreationRequest.creationRequestForAssetFromVideo(atFileURL: fileURL)
+                let request = PHAssetCreationRequest.creationRequestForAssetFromVideo(atFileURL: fileURL)
+                placeholderID = request?.placeholderForCreatedAsset?.localIdentifier
             }) { success, error in
-                if success {
-                    let options = PHFetchOptions()
-                    options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
-                    options.fetchLimit = 1
-                    let fetch = PHAsset.fetchAssets(with: .video, options: options)
-                    cont.resume(returning: fetch.firstObject?.localIdentifier ?? "")
-                } else {
-                    cont.resume(throwing: AppError.saveToPhotoFailed(error?.localizedDescription ?? "未知错误"))
+                // 整个类标记为 @MainActor，continuation 必须在主 actor 上 resume，
+                // 用 MainActor.run 包装可防止真机上因隔离违规闪退。
+                MainActor.run {
+                    if success, let id = placeholderID, !id.isEmpty {
+                        cont.resume(returning: id)
+                    } else if let error = error {
+                        cont.resume(throwing: AppError.saveToPhotoFailed(error.localizedDescription))
+                    } else {
+                        cont.resume(throwing: AppError.saveToPhotoFailed("保存视频失败"))
+                    }
                 }
             }
         }
@@ -51,10 +59,12 @@ final class PhotoLibraryService {
             PHPhotoLibrary.shared().performChanges({
                 PHAssetChangeRequest.deleteAssets(assets)
             }) { success, error in
-                if success {
-                    cont.resume()
-                } else {
-                    cont.resume(throwing: AppError.deleteOriginalFailed(error?.localizedDescription ?? "未知错误"))
+                MainActor.run {
+                    if success {
+                        cont.resume()
+                    } else {
+                        cont.resume(throwing: AppError.deleteOriginalFailed(error?.localizedDescription ?? "删除原视频失败"))
+                    }
                 }
             }
         }
