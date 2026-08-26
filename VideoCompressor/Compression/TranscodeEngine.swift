@@ -19,6 +19,9 @@ struct TranscodeEngine {
                           progress: ((Double) -> Void)? = nil,
                           isCancelled: (() -> Bool)? = nil) async throws {
         try? FileManager.default.removeItem(at: outputURL)
+        // 确保输出父目录存在（自定义输出路径场景下），否则 AVAssetWriter 初始化会失败
+        try? FileManager.default.createDirectory(at: outputURL.deletingLastPathComponent(),
+                                                 withIntermediateDirectories: true)
 
         guard let reader = try? AVAssetReader(asset: asset) else { throw AppError.videoReadFailed }
         guard let videoTrack = try await asset.loadTracks(withMediaType: .video).first else {
@@ -169,6 +172,12 @@ struct TranscodeEngine {
         if writer.status != .completed {
             try? FileManager.default.removeItem(at: outputURL)
             throw AppError.compressionFailed(writer.error?.localizedDescription ?? "写入失败")
+        }
+        // 校验产物：必须存在且大小 > 0，避免输出空文件被误认为成功
+        let outSize = (try? FileManager.default.attributesOfItem(atPath: outputURL.path)[.size] as? Int64) ?? 0
+        guard outSize > 0 else {
+            try? FileManager.default.removeItem(at: outputURL)
+            throw AppError.outputFileEmpty
         }
     }
 }

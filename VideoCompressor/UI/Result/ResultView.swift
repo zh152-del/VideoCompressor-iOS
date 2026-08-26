@@ -112,16 +112,32 @@ struct ResultView: View {
         busy = true
         Task {
             do {
+                // 1) 先保存压缩视频（仅申请 addOnly 权限）
                 let id = try await PhotoLibraryService.shared.saveVideo(at: result.outputURL)
                 savedID = id
-                if settings.deleteOriginalAfterSave, let orig = result.item.localIdentifier {
-                    try? await PhotoLibraryService.shared.deleteOriginal(localIdentifier: orig)
-                }
+                // 2) 保存成功后才写历史；此时输出文件使命完成，可清理
                 history.add(result.historyEntry(savedID: id))
                 TempFileManager.shared.remove(result.outputURL)
+
+                // 3) 仅当开启「保存后删除原视频」且原片存在时，才删除原片。
+                //    删除失败仅提示，不回滚已保存状态、不崩溃。
+                var message = "压缩后的视频已保存到你的照片图库。"
+                if settings.deleteOriginalAfterSave, let orig = result.item.localIdentifier {
+                    do {
+                        try await PhotoLibraryService.shared.deleteOriginal(localIdentifier: orig)
+                        message = "压缩后的视频已保存，原视频已删除。"
+                    } catch {
+                        if let e = error as? AppError {
+                            message = "压缩视频已保存，但删除原视频失败：\(e.recoverySuggestion)"
+                        } else {
+                            message = "压缩视频已保存，但删除原视频失败：\(error.localizedDescription)"
+                        }
+                    }
+                }
                 alertTitle = "保存成功"
-                alertMessage = "压缩后的视频已保存到你的照片图库。"
+                alertMessage = message
             } catch {
+                // 保存失败：不删输出文件、不删原视频、不写历史为「已保存」、不崩溃。
                 if let e = error as? AppError {
                     alertTitle = e.errorDescription
                     alertMessage = e.recoverySuggestion

@@ -42,8 +42,8 @@
     <key>UIApplicationSupportsIndirectInputEvents</key>
     <true/>
     <key>NSPhotoLibraryUsageDescription</key>
-    <string>本应用需要访问你的照片图库，以选择要压缩的视频，以及在压缩完成后把结果保存回图库。我们不会上传任何视频。</string>
+    <string>用于读取和管理用户选择的视频，以完成保存和删除原视频操作。</string>
     <key>NSPhotoLibraryAddUsageDescription</key>
-    <string>压缩完成后，本应用需要把视频保存到你的照片图库。视频仅在你的设备本地处理，不会上传。</string>
+    <string>用于将压缩后的视频保存到照片图库。</string>
 </dict>
 </plist>
