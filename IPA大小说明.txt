@@ -1,0 +1,29 @@
+===========================================================
+ IPA 体积说明（用 7-Zip / 改名 .zip 解压后核对）
+===========================================================
+压缩包文件本身 (VideoCompressor-unsigned.ipa):
+   388472 字节 (Windows 显示的大小)
+
+下面是你双击 .ipa 看到的 375KB 的真实身份——它就是一个 ZIP 压缩包。
+把它当成 zip 解压开后，里面内容的【未压缩】大小如下：
+
+Archive:  VideoCompressor-unsigned.ipa
+  Length      Date    Time    Name
+---------  ---------- -----   ----
+        0  2026-08-26 20:42   Payload/
+        0  2026-08-26 20:42   Payload/VideoCompressor.app/
+  1762344  2026-08-26 20:42   Payload/VideoCompressor.app/VideoCompressor
+    22255  2026-08-26 20:42   Payload/VideoCompressor.app/Assets.car
+        0  2026-08-26 20:42   Payload/VideoCompressor.app/LaunchScreen.storyboardc/
+      924  2026-08-26 20:42   Payload/VideoCompressor.app/LaunchScreen.storyboardc/UIViewController-01J-lp-oVM.nib
+     2654  2026-08-26 20:42   Payload/VideoCompressor.app/LaunchScreen.storyboardc/01J-lp-oVM-view-Ze5-6X-2gC.nib
+      258  2026-08-26 20:42   Payload/VideoCompressor.app/LaunchScreen.storyboardc/Info.plist
+      811  2026-08-26 20:42   Payload/VideoCompressor.app/Info.plist
+        8  2026-08-26 20:42   Payload/VideoCompressor.app/PkgInfo
+---------                     -------
+  1789254                     10 files
+
+未压缩总大小 ≈ 1747 KB (即 ~1.8MB)
+
+二进制 Mach-O 单独大小:
+  VideoCompressor = 1762344 字节 (1.68 MB)

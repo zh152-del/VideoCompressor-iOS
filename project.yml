@@ -23,15 +23,15 @@ targets:
       path: VideoCompressor/Resources/Info.plist
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.videocompressor.VideoCompressor
-        PRODUCT_NAME: VideoCompressor
+        PRODUCT_BUNDLE_IDENTIFIER: com.videocompressor.axo
+        PRODUCT_NAME: axo
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         CODE_SIGN_ENTITLEMENTS: VideoCompressor/Resources/VideoCompressor.entitlements
         CODE_SIGNING_ALLOWED: "NO"
         DEVELOPMENT_TEAM: ""
-        MARKETING_VERSION: "1.0.0"
-        CURRENT_PROJECT_VERSION: "1"
+        MARKETING_VERSION: "axo1"
+        CURRENT_PROJECT_VERSION: "2"
         GENERATE_INFOPLIST_FILE: "NO"
     dependencies: []
   VideoCompressorTests:
@@ -46,7 +46,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.videocompressor.VideoCompressorTests
         PRODUCT_NAME: VideoCompressorTests
         CODE_SIGNING_ALLOWED: "NO"
-        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/VideoCompressor.app/VideoCompressor"
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/axo.app/axo"
         BUNDLE_LOADER: "$(TEST_HOST)"
         SUPPORTED_PLATFORMS: "iphonesimulator iphoneos"
         IPHONEOS_DEPLOYMENT_TARGET: "16.0"

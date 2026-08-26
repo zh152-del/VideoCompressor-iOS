@@ -9,7 +9,7 @@ struct ExportPresetEngine {
         let choose: ([(Int, String)]) -> String = { candidates in
             let valid = candidates.filter { $0.0 <= sourceHeight }
             if let lowest = valid.last { return lowest.1 }  // 在有效候选里取较低者
-            return candidates.last!.1                       // 全部超限则取最低预设
+            return candidates.last.map { $0.1 } ?? ""     // 全部超限则取最低预设（兜底空串，理论上不会触发）
         }
         switch mode {
         case .quick:

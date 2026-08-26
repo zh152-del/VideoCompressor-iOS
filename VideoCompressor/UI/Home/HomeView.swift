@@ -60,7 +60,7 @@ struct HomeView: View {
                 }
                 .padding()
             }
-            .navigationTitle("视频压缩")
+            .navigationTitle("axo")
             .sheet(isPresented: $showPicker) {
                 VideoPicker(onPicked: { items in
                     selected.append(contentsOf: items)

@@ -49,20 +49,22 @@ jobs:
 
       - name: Package unsigned IPA
         run: |
-          APP=$(find build/Build/Products/Release-iphoneos -name "VideoCompressor.app" | head -n 1)
+          APP=$(find build/Build/Products/Release-iphoneos -name "axo.app" | head -n 1)
           echo "App path: $APP"
+          if [ -z "$APP" ]; then echo "未找到 axo.app，尝试备用名称..."; APP=$(find build/Build/Products/Release-iphoneos -name "*.app" | head -n 1); fi
+          echo "Final app path: $APP"
           if [ -z "$APP" ]; then echo "未找到 .app，打包中止"; exit 1; fi
           mkdir -p Payload
           cp -R "$APP" Payload/
-          zip -r VideoCompressor-unsigned.ipa Payload
+          zip -r axo1-unsigned.ipa Payload
           rm -rf Payload
-          ls -lh VideoCompressor-unsigned.ipa
+          ls -lh axo1-unsigned.ipa
 
       - name: Upload unsigned IPA
         uses: actions/upload-artifact@v4
         with:
-          name: VideoCompressor-unsigned-ipa
-          path: VideoCompressor-unsigned.ipa
+          name: axo1-unsigned-ipa
+          path: axo1-unsigned.ipa
 
       - name: Upload build logs on failure
         if: failure()
