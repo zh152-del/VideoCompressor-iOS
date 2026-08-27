@@ -42,6 +42,11 @@ final class CompressionSession: ObservableObject {
                     tasks[idx].status = .success(r)
                 }
                 finishedResults = results
+                // 压缩完成即写入历史（与「是否保存到照片」解耦），保证每次压缩都有记录。
+                // savedAssetLocalIdentifier 置 nil：历史只记录压缩结果，保存状态不在 UI 展示。
+                for r in results {
+                    history.add(r.historyEntry(savedID: nil))
+                }
             } catch is CancellationError {
                 handleAbort()
             } catch let e as AppError {
@@ -69,10 +74,5 @@ final class CompressionSession: ObservableObject {
     func cancel() {
         service.cancel()
         runTask?.cancel()
-    }
-
-    /// 单个结果保存成功后写入历史。
-    func recordHistory(_ result: CompressionResult, savedID: String?) {
-        history.add(result.historyEntry(savedID: savedID))
     }
 }

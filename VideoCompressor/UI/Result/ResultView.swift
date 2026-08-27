@@ -10,7 +10,6 @@ struct ResultView: View {
     @State private var alertTitle = ""
     @State private var alertMessage = ""
     @State private var showAlert = false
-    @EnvironmentObject var history: HistoryStore
     @EnvironmentObject var settings: SettingsStore
 
     private var isSaved: Bool { (savedID ?? "").isEmpty == false }
@@ -115,8 +114,8 @@ struct ResultView: View {
                 // 1) 先保存压缩视频（仅申请 addOnly 权限）
                 let id = try await PhotoLibraryService.shared.saveVideo(at: result.outputURL)
                 savedID = id
-                // 2) 保存成功后才写历史；此时输出文件使命完成，可清理
-                history.add(result.historyEntry(savedID: id))
+                // 2) 历史已在「压缩完成」时统一写入（CompressionSession），此处不再重复；
+                //    保存成功后清理输出临时文件。
                 TempFileManager.shared.remove(result.outputURL)
 
                 // 3) 仅当开启「保存后删除原视频」且原片存在时，才删除原片。

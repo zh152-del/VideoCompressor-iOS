@@ -35,19 +35,27 @@ struct TranscodeEngine {
         let videoFormatDescs = try await videoTrack.load(.formatDescriptions)
         let duration = try await asset.load(.duration).seconds
 
-        // 计算目标尺寸：绝不放大低分辨率视频
-        let targetH = options.maxHeight.map { min($0, Int(display.height)) } ?? Int(display.height)
-        let scale = display.height > 0 ? Double(targetH) / Double(display.height) : 1.0
-        let targetW = options.maxHeight == nil ? Int(display.width) : max(2, Int(Double(display.width) * scale))
-        let outW = max(2, targetW)
-        let outH = max(2, targetH)
+        // 计算目标尺寸：绝不放大低分辨率视频。
+        // 源尺寸可能为 0（个别视频元数据异常），做兜底避免除零 / NaN。
+        let srcH = max(1, Int(display.height))
+        let srcW = max(1, Int(display.width))
+        let targetH = options.maxHeight.map { min($0, srcH) } ?? srcH
+        let scale = Double(targetH) / Double(srcH)
+        let targetW = options.maxHeight == nil ? srcW : max(2, Int(Double(srcW) * scale))
+        // 编码器要求宽高为偶数（H.264/HEVC 对奇数尺寸极敏感，常在 startWriting 阶段
+        // 抛不可捕获的 ObjC 异常导致闪退），这里统一向上取整到偶数。
+        let outW = Self.makeEven(max(2, targetW))
+        let outH = Self.makeEven(max(2, targetH))
 
-        // 计算码率：目标文件大小优先，否则按画质系数
+        // 计算码率：目标文件大小优先，否则按画质系数。设下限避免极低码率让编码器会话异常。
         let bitrate: Int64 = {
+            let raw: Int64
             if let t = options.targetSizeBytes {
-                return BitrateCalculator.bitrate(targetBytes: t, durationSeconds: duration)
+                raw = BitrateCalculator.bitrate(targetBytes: t, durationSeconds: duration)
+            } else {
+                raw = BitrateCalculator.bitrate(quality: options.quality, height: outH)
             }
-            return BitrateCalculator.bitrate(quality: options.quality, height: outH)
+            return max(raw, 300_000)
         }()
 
         let fps = max(1.0, options.fps.map { min($0, Double(sourceFps) > 0 ? Double(sourceFps) : 30.0) } ?? (Double(sourceFps) > 0 ? Double(sourceFps) : 30.0))
@@ -57,11 +65,12 @@ struct TranscodeEngine {
             throw AppError.exportFailed
         }
 
-        let profileLevel: String = options.codec == .hevc ? "HEVC_Main_AutoLevel" : "H264_High_AutoLevel"
+        // 不强制指定 AVVideoProfileLevelKey：显式 level 在「低码率 + 低分辨率」组合下
+        // 可能与编码器支持的关键级不兼容，触发 VideoToolbox 内部不可捕获异常（闪退）。
+        // 交由系统自动选择合法 level 最稳妥。
         let compressionProps: [String: Any] = [
             AVVideoAverageBitRateKey: bitrate,
-            AVVideoMaxKeyFrameIntervalKey: Int(fps) * 2,
-            AVVideoProfileLevelKey: profileLevel
+            AVVideoMaxKeyFrameIntervalKey: max(2, Int(fps) * 2)
         ]
         let videoSettings: [String: Any] = [
             AVVideoCodecKey: options.codec.avCodecType,
@@ -179,5 +188,10 @@ struct TranscodeEngine {
             try? FileManager.default.removeItem(at: outputURL)
             throw AppError.outputFileEmpty
         }
+    }
+
+    /// 将尺寸向上取整为偶数，满足 H.264/HEVC 编码器对宽高的对齐要求。
+    private static func makeEven(_ v: Int) -> Int {
+        return v % 2 == 0 ? v : v + 1
     }
 }
