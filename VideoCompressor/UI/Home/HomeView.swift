@@ -1,22 +1,19 @@
 import SwiftUI
+import Photos
 
-/// 主页「压缩」。
-///
-/// 交互状态机（由 AppState / CompressionSession 驱动，不再用散落的 Boolean）：
-///   idle（无已选视频）→ ready（已选）→ compressing（session.isRunning）→ completed/failed
-/// 「开始压缩」按钮在 idle 时 disabled、压缩中显示「正在压缩…」，绝无「点了没反应」。
-///
-/// Presentation 修饰符分层挂载（关键修复）：
-/// SwiftUI 中同一视图叠加多个 present 修饰符（sheet/fullScreenCover/alert）时
-/// 只有部分会生效。现拆分为：sheet→ScrollView、fullScreenCover+导航→NavigationStack、
-/// alert→header 视图，各自独立节点。
+/// 主页「压缩」：自动扫描相册视频 + 规格展示 + 选择压缩 + 底部操作区。
+/// 已压缩识别：文件名含 __VC__（压缩成品保存时命名，重装 App 后仍可识别）。
 struct HomeView: View {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var temp: TempFileManager
     @EnvironmentObject var settings: SettingsStore
+    @StateObject private var scanner = PhotoScanner()
     @State private var showPicker = false
     @State private var showSettingsPage = false
     @State private var error: AppError?
+    @State private var exportingIDs: Set<String> = []
+    @State private var askProcessedItems: [VideoItem]? = nil   // 询问模式待定项
+    @State private var skipNote: String? = nil
 
     private var selected: [VideoItem] { appState.selectedVideos }
     private var profile: CompressionProfile { appState.profile }
@@ -35,7 +32,12 @@ struct HomeView: View {
                         } message: {
                             if let e = error { Text(e.recoverySuggestion) }
                         }
+                    permissionHint
+                    pickerEntry
                     mainContent
+                    if !selected.isEmpty {
+                        compressionMethodRow
+                    }
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 8)
@@ -49,35 +51,51 @@ struct HomeView: View {
                     AppLog.photo("选择视频 \(items.count) 个，累计 \(appState.selectedVideos.count) 个")
                 }, temp: temp)
             }
-            // 所有 present 修饰符都挂在 NavigationStack【内部】。
-            // 【关键修复】上一版 navigationDestination 挂在 NavigationStack 外部，
-            // 这是 SwiftUI 非法结构：状态翻 true 时直接 fatalError——
-            // 即「点压缩方式进不去 / 点开始压缩闪退」的根因。
+            // 所有 present 修饰符都在 NavigationStack 内部（navigationDestination 在外层=非法结构会闪退）
             .navigationDestination(isPresented: $showSettingsPage) {
                 CompressionSettingsPage()
             }
             .fullScreenCover(isPresented: $appState.showProgressCover) {
                 CompressionProgressView(session: session) {
-                    // 用户明确结束本轮：清空已选并关闭进度页
                     appState.finishRound()
                 }
                 .environmentObject(temp)
                 .environmentObject(settings)
             }
+            // 询问模式：一次确认整批已压缩视频
+            .confirmationDialog("有 \(askProcessedItems?.count ?? 0) 个视频已压缩过",
+                                isPresented: Binding(
+                                    get: { askProcessedItems != nil },
+                                    set: { if !$0 { askProcessedItems = nil } }
+                                ), titleVisibility: .visible) {
+                Button("跳过这些视频") {
+                    let skip = Set(askProcessedItems?.map { $0.id } ?? [])
+                    launchRun(items: selected.filter { !skip.contains($0.id) })
+                }
+                Button("重新压缩", role: .destructive) {
+                    launchRun(items: selected)
+                }
+                Button("取消", role: .cancel) {}
+            } message: {
+                Text("文件名含 __VC__ 标记的视频之前已压缩过。跳过不会改动这些视频。")
+            }
         }
         .overlay(alignment: .bottom) {
-            // 底部操作区：固定尺寸浮层，不产生全屏透明遮挡
             if !selected.isEmpty && !appState.showProgressCover {
                 bottomBar
                     .padding(.horizontal, 16)
-                    .padding(.bottom, 92)   // 稳定位于底部导航之上，不重叠
+                    .padding(.bottom, 92)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
         .animation(.easeOut(duration: 0.2), value: selected.isEmpty)
+        .onAppear {
+            // 每次回到主页都重新扫描（轻量元数据），保证 __VC__ 标记/外部删除状态及时反映
+            scanner.scan()
+        }
     }
 
-    // MARK: - 顶部大标题
+    // MARK: - 顶部
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -89,54 +107,134 @@ struct HomeView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    // MARK: - 主体内容
+    /// 权限提示（拒绝/受限时给出去系统设置的入口，绝不 Crash）。
+    @ViewBuilder
+    private var permissionHint: some View {
+        if scanner.status == .denied {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("没有照片图库权限").font(.headline)
+                Text("请在系统设置中允许访问照片，然后返回刷新。")
+                    .font(.subheadline).foregroundStyle(.secondary)
+                Button {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
+                } label: {
+                    Text("前往系统设置")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(Color.accentColor)
+                }
+                .buttonStyle(PressableButtonStyle())
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        }
+    }
+
+    private var pickerEntry: some View {
+        HStack {
+            GlassCapsuleButton(title: "刷新列表", systemImage: "arrow.clockwise") {
+                AppLog.ui("手动刷新相册扫描")
+                scanner.scan()
+            }
+            Spacer()
+            GlassCapsuleButton(title: "从文件选择", systemImage: "plus") {
+                showPicker = true
+            }
+        }
+    }
+
+    // MARK: - 主体
 
     @ViewBuilder
     private var mainContent: some View {
-        if selected.isEmpty {
-            emptyState
-        } else {
-            selectedList
-        }
-    }
-
-    /// 空状态：极简文字 + 适中胶囊按钮。
-    private var emptyState: some View {
-        VStack(spacing: 10) {
-            Text("还没有视频")
-                .font(.title3.weight(.medium))
-                .foregroundStyle(.secondary)
-            Text("选择照片图库中的视频开始压缩")
-                .font(.subheadline)
-                .foregroundStyle(.tertiary)
-            GlassCapsuleButton(title: "选择视频", systemImage: "plus") {
-                AppLog.ui("点击：选择视频")
-                showPicker = true
+        switch scanner.status {
+        case .idle:
+            VStack(spacing: 10) {
+                Text("还没有视频").font(.title3.weight(.medium)).foregroundStyle(.secondary)
+                Text("授权照片访问后自动显示相册中的视频").font(.subheadline).foregroundStyle(.tertiary)
             }
-            .padding(.top, 14)
+            .frame(maxWidth: .infinity).padding(.top, 100)
+        case .scanning:
+            HStack { Spacer(); ProgressView(); Text("正在扫描相册视频…").font(.subheadline).foregroundStyle(.secondary); Spacer() }
+                .padding(.top, 100)
+        case .denied:
+            EmptyView()
+        case .limited:
+            scannedList
+        case .done:
+            if scanner.videos.isEmpty {
+                VStack(spacing: 10) {
+                    Text("相册中没有视频").font(.title3.weight(.medium)).foregroundStyle(.secondary)
+                }.frame(maxWidth: .infinity).padding(.top, 100)
+            } else {
+                scannedList
+            }
         }
-        .frame(maxWidth: .infinity)
-        .padding(.top, 130)
     }
 
-    /// 已选视频列表。
-    private var selectedList: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text("已选择 \(selected.count) 个视频")
-                .font(.headline)
-                .padding(.bottom, 8)
-
-            ForEach(selected) { item in
-                VideoRow(item: item) {
-                    appState.removeVideo(item)
-                }
-                if item.id != selected.last?.id {
+    /// 扫描列表：懒加载，封面按需获取（AssetThumbnail 内部 NSCache + 小图请求）。
+    private var scannedList: some View {
+        LazyVStack(alignment: .leading, spacing: 0) {
+            if case .limited = scanner.status {
+                Text("受限访问：仅显示你授权的照片视频")
+                    .font(.caption).foregroundStyle(.secondary)
+                    .padding(.bottom, 6)
+            }
+            if !selected.isEmpty {
+                Text("已选 \(selected.count) 个视频").font(.headline).padding(.bottom, 8)
+            }
+            ForEach(scanner.videos) { video in
+                ScanVideoRow(
+                    video: video,
+                    isSelected: selected.contains { $0.localIdentifier == video.id },
+                    isExporting: exportingIDs.contains(video.id),
+                    onToggle: { toggle(video) }
+                )
+                if video.id != scanner.videos.last?.id {
                     Divider().padding(.leading, 64)
                 }
             }
+            if let note = skipNote {
+                Text(note).font(.caption).foregroundStyle(.secondary).padding(.top, 8)
+            }
+        }
+    }
 
-            compressionMethodRow
-                .padding(.top, 20)
+    /// 勾选/取消一个扫描视频：勾选时先导出本地副本（流式，非整段载入内存），再进入压缩队列。
+    private func toggle(_ video: ScannedVideo) {
+        if let idx = selected.firstIndex(where: { $0.localIdentifier == video.id }) {
+            appState.selectedVideos.remove(at: idx)
+            return
+        }
+        guard !exportingIDs.contains(video.id) else { return }
+        exportingIDs.insert(video.id)
+        Task {
+            do {
+                let url = try await PhotoLibraryService.shared.exportVideo(from: video.asset)
+                let meta = try? await VideoInfoReader.readInfo(at: url)
+                let thumbURL = temp.newThumbnailURL()
+                try? await VideoInfoReader.generateThumbnail(from: url, to: thumbURL)
+                let item = VideoItem(
+                    localIdentifier: video.id,
+                    sourceURL: url,
+                    title: video.filename,
+                    durationSeconds: meta?.durationSeconds ?? video.duration,
+                    fileSizeBytes: meta?.fileSizeBytes ?? video.fileSizeBytes,
+                    width: meta?.width ?? video.pixelWidth,
+                    height: meta?.height ?? video.pixelHeight,
+                    fps: meta?.fps ?? 0,
+                    codecDescription: meta?.codecDescription ?? "未知",
+                    thumbnailURL: thumbURL,
+                    creationDate: nil
+                )
+                appState.selectedVideos.append(item)
+                AppLog.videoScan("已选择：\(video.filename)，\(Formatters.bytes(item.fileSizeBytes))")
+            } catch {
+                self.error = .videoReadFailed
+            }
+            exportingIDs.remove(video.id)
         }
     }
 
@@ -148,19 +246,12 @@ struct HomeView: View {
         } label: {
             HStack {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("压缩方式").font(.subheadline)
-                        .foregroundStyle(.primary)
-                    Text(estimateText)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    Text("压缩方式").font(.subheadline).foregroundStyle(.primary)
+                    Text(estimateText).font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
-                Text(profile.mode.displayName)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                Image(systemName: "chevron.right")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.tertiary)
+                Text(profile.mode.displayName).font(.subheadline).foregroundStyle(.secondary)
+                Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(.tertiary)
             }
             .padding(.vertical, 12)
             .contentShape(Rectangle())
@@ -168,7 +259,6 @@ struct HomeView: View {
         .buttonStyle(PressableButtonStyle())
     }
 
-    /// 预估文案：明确是估算值；无法压缩的视频如实说明。
     private var estimateText: String {
         let estimates = selected.compactMap { item -> Int64? in
             BitrateCalculator.estimateOutputBytes(fileSizeBytes: item.fileSizeBytes,
@@ -185,40 +275,30 @@ struct HomeView: View {
         }
         if totalEstimate < totalOriginal {
             var text = "预计节省约 \(Formatters.bytes(totalOriginal - totalEstimate))（估算值）"
-            if uncompressible > 0 {
-                text += " · \(uncompressible) 个可能无法压缩"
-            }
+            if uncompressible > 0 { text += " · \(uncompressible) 个可能无法压缩" }
             return text
         }
         return "所选视频码率已较低，可能无法再压缩"
     }
 
-    // MARK: - 底部操作区（按钮状态由 session.phase 驱动，点击后立即变化）
+    // MARK: - 底部操作区
 
     private var bottomBar: some View {
         let busy = session.isRunning
         let buttonTitle: String = {
             switch session.phase {
-            case .preparing:
-                return "准备压缩…"
+            case .preparing: return "准备压缩…"
             case .running:
-                if let i = session.currentIndex {
-                    return "正在压缩 \(i + 1) / \(session.tasks.count)"
-                }
+                if let i = session.currentIndex { return "正在压缩 \(i + 1) / \(session.tasks.count)" }
                 return "正在压缩…"
-            default:
-                return "开始压缩"
+            default: return "开始压缩"
             }
         }()
         return VStack(spacing: 12) {
             HStack {
-                Text("\(selected.count) 个视频")
-                    .font(.subheadline.weight(.medium))
+                Text("\(selected.count) 个视频").font(.subheadline.weight(.medium))
                 Spacer()
-                Text(estimateText)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                Text(estimateText).font(.caption).foregroundStyle(.secondary).lineLimit(1)
             }
             Button {
                 startCompression()
@@ -233,7 +313,6 @@ struct HomeView: View {
             }
             .buttonStyle(PressableButtonStyle())
             .disabled(busy)
-            .accessibilityHint(busy ? "压缩任务进行中" : "开始压缩所选视频")
         }
         .padding(16)
         .floatSurface(cornerRadius: 22)
@@ -241,33 +320,101 @@ struct HomeView: View {
 
     private func startCompression() {
         AppLog.ui("Start compression tapped，已选 \(selected.count) 个")
-        // ---- 压缩前完整输入检查：任何无效情况报错返回，绝不进入编码，绝不 Crash ----
         guard !selected.isEmpty else {
             error = .unknown("请先选择视频")
             return
-        }
-        // 逐个校验每个视频的有效性（批量串行压缩，逐个处理互不影响）
-        for item in selected {
-            guard item.fileSizeBytes > 0, item.durationSeconds > 0.2 else {
-                error = .videoReadFailed
-                return
-            }
-            guard FileManager.default.fileExists(atPath: item.sourceURL.path) else {
-                error = .videoReadFailed
-                return
-            }
         }
         guard session.phase == .idle || session.phase == .completed || session.phase == .cancelled else {
             error = .unknown("已有压缩任务在进行中")
             return
         }
         guard !session.isRunning else { return }
-        AppLog.compress("selectedVideos=\(selected.count)，profile=\(profile.mode.displayName)，总计=\(Formatters.bytes(selected.reduce(0) { $0 + $1.fileSizeBytes }))")
-        session.run(items: selected, profile: profile, settings: settings) { startError in
-            // 启动失败必须可见，绝不静默
+
+        // 已压缩视频处理策略（文件名含 __VC__）
+        let processed = selected.filter { $0.title.contains(ProcessedMark.marker) }
+        switch settings.processedPolicy {
+        case .skip where !processed.isEmpty:
+            let remaining = selected.filter { !processed.contains($0) }
+            if remaining.isEmpty {
+                error = .unknown("所选视频都已压缩过（设置中可更改处理方式）")
+                return
+            }
+            skipNote = "已自动跳过 \(processed.count) 个已压缩视频"
+            launchRun(items: remaining)
+        case .ask where !processed.isEmpty:
+            askProcessedItems = processed
+        default:
+            launchRun(items: selected)
+        }
+    }
+
+    private func launchRun(items: [VideoItem]) {
+        guard !items.isEmpty else {
+            error = .unknown("没有可压缩的视频")
+            return
+        }
+        for item in items {
+            guard item.fileSizeBytes > 0, item.durationSeconds > 0.2,
+                  FileManager.default.fileExists(atPath: item.sourceURL.path) else {
+                error = .videoReadFailed
+                return
+            }
+        }
+        AppLog.compress("selectedVideos=\(items.count)，profile=\(profile.mode.displayName)")
+        session.run(items: items, profile: profile, settings: settings) { startError in
             Task { @MainActor in error = startError }
         }
-        // run 已受理（phase=preparing），立即弹出进度页
         appState.showProgressCover = true
+    }
+}
+
+/// 扫描列表行：封面 + 名称 + 规格 + 已压缩徽章 + 勾选。
+struct ScanVideoRow: View {
+    let video: ScannedVideo
+    let isSelected: Bool
+    let isExporting: Bool
+    let onToggle: () -> Void
+
+    var body: some View {
+        Button(action: onToggle) {
+            HStack(spacing: 12) {
+                ZStack(alignment: .center) {
+                    AssetThumbnail(assetIdentifier: video.id, side: 52)
+                    if isSelected {
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .fill(Color.accentColor.opacity(0.35))
+                            .frame(width: 52, height: 52)
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundStyle(.white)
+                    }
+                    if isExporting {
+                        ProgressView()
+                            .frame(width: 52, height: 52)
+                            .background(Color.black.opacity(0.3), in: RoundedRectangle(cornerRadius: 8))
+                    }
+                }
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 6) {
+                        Text(video.filename).font(.subheadline.weight(.medium)).lineLimit(1)
+                        if video.isProcessed {
+                            Text("已压缩")
+                                .font(.caption2.weight(.medium))
+                                .foregroundStyle(.green)
+                                .padding(.horizontal, 5).padding(.vertical, 1)
+                                .background(Color.green.opacity(0.12), in: Capsule())
+                        }
+                    }
+                    Text("\(Formatters.bytes(video.fileSizeBytes)) · \(Formatters.time(video.duration)) · \(video.resolutionText) · \(video.aspectText)")
+                        .font(.caption).foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+                Spacer()
+            }
+            .padding(.vertical, 8)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(PressableButtonStyle())
+        .disabled(isExporting)
     }
 }

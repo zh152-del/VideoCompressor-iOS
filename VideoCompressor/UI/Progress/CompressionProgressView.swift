@@ -46,7 +46,10 @@ struct CompressionProgressView: View {
 
             if let current = session.currentTask {
                 VStack(spacing: 6) {
-                    Text("当前视频").font(.caption).foregroundStyle(.secondary)
+                    // 当前压缩视频封面：按 task.id 绑定，任务切换自动换图，异步结果不串图
+                    AssetThumbnail(assetIdentifier: current.item.localIdentifier, side: 120)
+                        .id(current.id)
+                    Text("当前压缩视频").font(.caption).foregroundStyle(.secondary)
                     Text(current.item.title).font(.headline).lineLimit(1)
                     // 阶段文案：让用户知道 App 正在工作，不是卡死
                     Text(stageText(for: current))
@@ -57,7 +60,7 @@ struct CompressionProgressView: View {
                             .padding(.top, 6)
                     }
                 }
-                .padding(.top, 26)
+                .padding(.top, 20)
             }
 
             if session.savedBytesSoFar > 0 {
@@ -65,6 +68,33 @@ struct CompressionProgressView: View {
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(.green)
                     .padding(.top, 16)
+            }
+
+            // 失败视频列表：实时更新（每失败一个立即出现，不等批次结束）
+            let failures = session.tasks.filter {
+                if case .failure = $0.status { return true } else { return false }
+            }
+            if !failures.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("失败的视频（\(failures.count)）")
+                        .font(.subheadline.weight(.medium)).foregroundStyle(.red)
+                    ForEach(failures) { t in
+                        HStack(spacing: 8) {
+                            AssetThumbnail(assetIdentifier: t.item.localIdentifier, side: 36)
+                                .id(t.id)
+                            Text(t.item.title).font(.caption).lineLimit(1)
+                            Spacer()
+                            if case .failure(let e) = t.status {
+                                Text(e.errorDescription).font(.caption2).foregroundStyle(.red).lineLimit(1)
+                            }
+                        }
+                    }
+                }
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .padding(.horizontal, 24)
+                .padding(.top, 14)
             }
 
             Spacer()
