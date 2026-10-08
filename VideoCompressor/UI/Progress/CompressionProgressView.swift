@@ -310,6 +310,8 @@ struct TaskResultRow: View {
             Text(e.errorDescription).foregroundStyle(.red)
         case .saving:
             Text("保存到照片…").foregroundStyle(.secondary)
+        case .skipped:
+            Text("已跳过（指纹识别为已压缩）").foregroundStyle(.secondary)
         case .cancelled:
             Text("已取消").foregroundStyle(.secondary)
         case .pending:
