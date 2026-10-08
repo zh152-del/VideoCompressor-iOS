@@ -244,7 +244,8 @@ final class CompressionSession: ObservableObject {
             outputCodec: item.codecDescription,
             durationSeconds: item.durationSeconds,
             savedAssetLocalIdentifier: nil,
-            outcome: "failed"
+            outcome: "failed",
+            originalAssetIdentifier: item.localIdentifier
         )
     }
 
