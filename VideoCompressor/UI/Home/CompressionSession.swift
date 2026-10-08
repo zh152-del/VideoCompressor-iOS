@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 import UIKit
+import Photos
 import Combine
 
 /// 压缩会话：唯一任务管理器（应用级持有，不随页面销毁）。
