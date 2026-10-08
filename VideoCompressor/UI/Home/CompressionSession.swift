@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import UIKit
 import Combine
 
 /// 压缩会话：唯一任务管理器（应用级持有，不随页面销毁）。
@@ -98,7 +99,20 @@ final class CompressionSession: ObservableObject {
         overallProgress = 0
         error = nil
         tasks = items.map { CompressionTaskModel(item: $0, profile: profile) }
+        service.resetCancellation()
         AppLog.compress("Run started：\(items.count) 个视频，模式：\(profile.mode.displayName)")
+
+        // 后台任务包裹（在 MainActor 上调用 UIApplication，保证线程安全；begin/end 严格成对）
+        var bgTaskID: UIBackgroundTaskIdentifier = .invalid
+        if UIApplication.shared.responds(to: #selector(UIApplication.beginBackgroundTask(withName:expirationHandler:))) {
+            bgTaskID = UIApplication.shared.beginBackgroundTask(withName: "VideoCompression") {
+                // 过期：系统要求尽快结束。停止编码并结束后台任务。
+                if bgTaskID != .invalid {
+                    UIApplication.shared.endBackgroundTask(bgTaskID)
+                    bgTaskID = .invalid
+                }
+            }
+        }
 
         runTask = Task {
             self.phase = .running
@@ -178,6 +192,10 @@ final class CompressionSession: ObservableObject {
 
             overallProgress = 1.0
             phase = service.isCancelledFlag ? .cancelled : .completed
+            if bgTaskID != .invalid {
+                UIApplication.shared.endBackgroundTask(bgTaskID)
+                bgTaskID = .invalid
+            }
             AppLog.compress("Run finished：成功 \(successCount) / noGain \(noGainCount) / 失败 \(failureCount)，节省 \(Formatters.bytes(savedBytesSoFar))")
         }
     }

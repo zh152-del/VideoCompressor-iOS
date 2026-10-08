@@ -15,33 +15,22 @@ import UIKit
 /// 设计为普通类（跨线程安全），所有 UI 更新通过主线程派发。
 final class CompressionService {
     private var isCancelled = false
-    private var bgTaskID: UIBackgroundTaskIdentifier = .invalid
 
     func cancel() {
         isCancelled = true
-        endBackgroundTask()
+    }
+
+    /// 新任务开始前重置取消标志。
+    func resetCancellation() {
+        isCancelled = false
     }
 
     /// 供会话层查询取消状态。
     var isCancelledFlag: Bool { isCancelled }
 
-    // MARK: - 后台任务（App 切到后台时尽量不被系统杀死）
-
-    private func beginBackgroundTask() {
-        bgTaskID = UIApplication.shared.beginBackgroundTask(withName: "VideoCompression") { [weak self] in
-            self?.cancel()
-            self?.endBackgroundTask()
-        }
-    }
-
-    private func endBackgroundTask() {
-        if bgTaskID != .invalid {
-            UIApplication.shared.endBackgroundTask(bgTaskID)
-            bgTaskID = .invalid
-        }
-    }
-
     // MARK: - 单个压缩（含校验与一次重试）
+    // 后台任务（UIBackgroundTask）包裹已上移到 CompressionSession（MainActor 上 begin/end），
+    // 避免 compress 在非主线程调用 UIApplication.shared 造成的线程安全隐患。
 
     /// 压缩单个视频。回调在调用方线程（服务内部仅 100ms 节流上报）。
     /// - Returns: CompressionResult。`noGain == true` 表示未能有效压缩
@@ -49,10 +38,6 @@ final class CompressionService {
     func compress(item: VideoItem, profile: CompressionProfile,
                   preferredCodec: VideoCodec = .hevc,
                   progress: ((Double) -> Void)? = nil) async throws -> CompressionResult {
-        isCancelled = false
-        beginBackgroundTask()
-        defer { endBackgroundTask() }
-
         let cancelled: () -> Bool = { [weak self] in self?.isCancelled ?? true }
 
         // ---- 前置判定：估算已无法有效压缩 → 跳过编码，直接 noGain ----
