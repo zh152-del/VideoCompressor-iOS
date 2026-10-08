@@ -49,18 +49,21 @@ struct HomeView: View {
                     AppLog.photo("选择视频 \(items.count) 个，累计 \(appState.selectedVideos.count) 个")
                 }, temp: temp)
             }
-        }
-        // presentation 挂在 NavigationStack 层（与 ScrollView 层分开，避免同视图多 present 冲突）
-        .navigationDestination(isPresented: $showSettingsPage) {
-            CompressionSettingsPage()
-        }
-        .fullScreenCover(isPresented: $appState.showProgressCover) {
-            CompressionProgressView(session: session) {
-                // 用户明确结束本轮：清空已选并关闭进度页
-                appState.finishRound()
+            // 所有 present 修饰符都挂在 NavigationStack【内部】。
+            // 【关键修复】上一版 navigationDestination 挂在 NavigationStack 外部，
+            // 这是 SwiftUI 非法结构：状态翻 true 时直接 fatalError——
+            // 即「点压缩方式进不去 / 点开始压缩闪退」的根因。
+            .navigationDestination(isPresented: $showSettingsPage) {
+                CompressionSettingsPage()
             }
-            .environmentObject(temp)
-            .environmentObject(settings)
+            .fullScreenCover(isPresented: $appState.showProgressCover) {
+                CompressionProgressView(session: session) {
+                    // 用户明确结束本轮：清空已选并关闭进度页
+                    appState.finishRound()
+                }
+                .environmentObject(temp)
+                .environmentObject(settings)
+            }
         }
         .overlay(alignment: .bottom) {
             // 底部操作区：固定尺寸浮层，不产生全屏透明遮挡
@@ -237,17 +240,37 @@ struct HomeView: View {
     }
 
     private func startCompression() {
+        AppLog.ui("Start compression tapped，已选 \(selected.count) 个")
+        // ---- 压缩前完整输入检查：任何无效情况报错返回，绝不进入编码，绝不 Crash ----
         guard !selected.isEmpty else {
-            error = .unknown("尚未选择视频")
+            error = .unknown("请先选择视频")
+            return
+        }
+        // 本阶段先保证单视频全流程稳定，批量（串行）在功能验证后恢复
+        guard selected.count == 1 else {
+            error = .unknown("当前版本先支持单个视频压缩，请只保留 1 个视频")
+            return
+        }
+        let item = selected[0]
+        guard item.fileSizeBytes > 0, item.durationSeconds > 0.2 else {
+            error = .videoReadFailed
+            return
+        }
+        guard FileManager.default.fileExists(atPath: item.sourceURL.path) else {
+            error = .videoReadFailed
+            return
+        }
+        guard session.phase == .idle || session.phase == .completed || session.phase == .cancelled else {
+            error = .unknown("已有压缩任务在进行中")
             return
         }
         guard !session.isRunning else { return }
-        AppLog.ui("点击：开始压缩（\(selected.count) 个视频，模式：\(profile.mode.displayName)）")
+        AppLog.compress("selectedVideos=1，profile=\(profile.mode.displayName)，source=\(Formatters.bytes(item.fileSizeBytes))")
         session.run(items: selected, profile: profile, settings: settings) { startError in
             // 启动失败必须可见，绝不静默
             Task { @MainActor in error = startError }
         }
-        // 只要 run 正常受理就弹出进度页（run 内部失败会通过 session.error / 回调展示）
+        // run 已受理（phase=preparing），立即弹出进度页
         appState.showProgressCover = true
     }
 }
