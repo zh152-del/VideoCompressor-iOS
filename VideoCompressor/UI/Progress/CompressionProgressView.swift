@@ -49,7 +49,7 @@ struct CompressionProgressView: View {
                     Text("当前视频").font(.caption).foregroundStyle(.secondary)
                     Text(current.item.title).font(.headline).lineLimit(1)
                     // 阶段文案：让用户知道 App 正在工作，不是卡死
-                    stageText(for: current)
+                    Text(stageText(for: current))
                         .font(.caption).foregroundStyle(.secondary)
                     if current.status.isCompressing {
                         ProgressBar(value: current.progressValue)
