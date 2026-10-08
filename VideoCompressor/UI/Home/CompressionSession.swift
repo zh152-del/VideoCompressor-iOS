@@ -2,7 +2,12 @@ import Foundation
 import SwiftUI
 import Combine
 
-/// 压缩会话：管理批量任务的完整生命周期（应用级单例持有，不随页面销毁）。
+/// 压缩会话：唯一任务管理器（应用级持有，不随页面销毁）。
+///
+/// 统一状态机（避免多个 Boolean 互相矛盾）：
+///   idle → preparing → running → completed
+///                          ↘ cancelled（用户取消）
+/// 单个任务内部阶段：pending → compressing → saving → success / noGain / failure。
 ///
 /// 每个视频的流水线（顺序严格，绝不可颠倒）：
 ///   压缩 → 校验输出（存在/大小>0/小于原文件）→ 保存到照片图库
@@ -10,16 +15,29 @@ import Combine
 ///
 /// 关键约束：
 /// - 只有「保存成功」的视频才允许删除原视频。
-/// - 未节省空间（noGain）的视频：不保存、不删除原视频，历史如实记录。
+/// - 未节省空间（noGain）：不保存、不删除原视频，历史如实记录。
 /// - 保存失败：原视频保留，任务标记失败，输出临时文件清理。
 /// - 任何失败都通过任务状态 / error 暴露，绝不静默吞掉。
 @MainActor
 final class CompressionSession: ObservableObject {
+
+    /// 会话级统一状态。
+    enum Phase: Equatable {
+        case idle        // 无任务
+        case preparing   // 已受理，正在准备
+        case running     // 正在逐个压缩/保存
+        case completed   // 全部结束（含部分失败）
+        case cancelled   // 用户取消
+    }
+
     @Published var tasks: [CompressionTaskModel] = []
-    @Published var isRunning = false
+    @Published var phase: Phase = .idle
     @Published var overallProgress: Double = 0
-    @Published var cancelled = false
     @Published var error: AppError?
+
+    /// 兼容读取：是否正在执行任务。
+    var isRunning: Bool { phase == .preparing || phase == .running }
+    var cancelled: Bool { phase == .cancelled }
 
     private let service = CompressionService()
     private var runTask: Task<Void, Never>?
@@ -32,8 +50,9 @@ final class CompressionSession: ObservableObject {
     var noGainCount: Int { tasks.filter { if case .noGain = $0.status { return true } else { return false } }.count }
     var failureCount: Int { tasks.filter { if case .failure = $0.status { return true } else { return false } }.count }
     var finishedCount: Int { tasks.filter { $0.status.isFinished }.count }
+    var savedToPhotosCount: Int { successCount }
 
-    var currentIndex: Int? { tasks.firstIndex { $0.status.isCompressing } }
+    var currentIndex: Int? { tasks.firstIndex { $0.status.isCompressing || $0.status.isSaving } }
     var currentTask: CompressionTaskModel? { currentIndex.map { tasks[$0] } }
 
     var savedBytesSoFar: Int64 {
@@ -54,8 +73,8 @@ final class CompressionSession: ObservableObject {
 
     // MARK: - 启动
 
-    /// 启动批量压缩。启动被拒（无视频 / 正在运行 / 源文件已失效）时通过 `onStartError`
-    /// 回调向 UI 报告，绝不静默返回。
+    /// 启动批量压缩。单个与批量共用同一核心流程（items.count == 1 时 UI 展示不同而已）。
+    /// 启动被拒（无视频 / 正在运行 / 源文件已失效）时通过 `onStartError` 回调报告，绝不静默。
     func run(items: [VideoItem], profile: CompressionProfile,
              settings: SettingsStore,
              onStartError: ((AppError) -> Void)? = nil) {
@@ -63,7 +82,7 @@ final class CompressionSession: ObservableObject {
             onStartError?(.unknown("尚未选择视频"))
             return
         }
-        guard !isRunning else {
+        guard phase == .idle || phase == .completed || phase == .cancelled else {
             onStartError?(.unknown("已有压缩任务在进行中"))
             return
         }
@@ -75,18 +94,19 @@ final class CompressionSession: ObservableObject {
             return
         }
 
-        isRunning = true
-        cancelled = false
+        phase = .preparing
         overallProgress = 0
         error = nil
         tasks = items.map { CompressionTaskModel(item: $0, profile: profile) }
-        AppLog.compress("开始任务：\(items.count) 个视频，模式：\(profile.mode.displayName)")
+        AppLog.compress("Run started：\(items.count) 个视频，模式：\(profile.mode.displayName)")
 
         runTask = Task {
+            self.phase = .running
             for idx in items.indices {
                 if Task.isCancelled || service.isCancelledFlag { break }
                 tasks[idx].status = .compressing(progress: 0)
                 overallProgress = Double(idx) / Double(items.count)
+                AppLog.compress("Task started [\(idx + 1)/\(items.count)]：\(items[idx].title)，原始 \(Formatters.bytes(items[idx].fileSizeBytes))")
 
                 do {
                     let result = try await service.compress(item: items[idx], profile: profile,
@@ -98,44 +118,46 @@ final class CompressionSession: ObservableObject {
                     }
 
                     if result.noGain {
-                        AppLog.compress("[\(items[idx].title)] 未节省空间（\(Formatters.bytes(result.outputSizeBytes)) ≥ 原 \(Formatters.bytes(items[idx].fileSizeBytes))），保留原视频")
+                        AppLog.compress("No gain：\(items[idx].title)（\(Formatters.bytes(result.outputSizeBytes)) ≥ 原 \(Formatters.bytes(items[idx].fileSizeBytes))），保留原视频")
                         tasks[idx].status = .noGain(result)
-                        history.add(result.historyEntry(savedID: nil))
-                        AppLog.history("写入历史（noGain）：\(items[idx].title)")
+                        self.writeHistory(result.historyEntry(savedID: nil, outcome: "noGain"))
                         continue
                     }
 
                     // ---- 保存到照片图库（成功后才允许删除原视频）----
                     guard let outputURL = result.outputURL else {
                         tasks[idx].status = .failure(.outputFileMissing)
+                        self.writeHistory(Self.failedEntry(for: items[idx], profile: profile))
                         continue
                     }
                     do {
-                        AppLog.photo("开始保存：\(items[idx].title)")
+                        tasks[idx].status = .saving
+                        AppLog.photo("Save started：\(items[idx].title)")
                         let savedID = try await PhotoLibraryService.shared.saveVideo(at: outputURL)
-                        AppLog.photo("保存成功：\(items[idx].title) → \(savedID)")
+                        AppLog.photo("Save succeeded：\(items[idx].title) → \(savedID)")
                         var final = result
                         final.savedPhotoLocalIdentifier = savedID
                         temp.remove(outputURL)
                         tasks[idx].status = .success(final)
-                        history.add(final.historyEntry(savedID: savedID))
-                        AppLog.history("写入历史：\(items[idx].title)，节省 \(Formatters.bytes(final.savedBytes))")
+                        self.writeHistory(final.historyEntry(savedID: savedID, outcome: "saved"))
 
                         // ---- 保存成功后才删除原视频 ----
                         if settings.deleteOriginalAfterSave, let orig = items[idx].localIdentifier {
                             do {
+                                AppLog.delete("Delete started：\(items[idx].title)")
                                 try await PhotoLibraryService.shared.deleteOriginal(localIdentifier: orig)
-                                AppLog.delete("原视频已删除：\(items[idx].title)")
+                                AppLog.delete("Delete succeeded：\(items[idx].title)")
                             } catch {
                                 // 删除失败不回滚保存状态：原视频仍在图库，用户可手动删
-                                AppLog.delete("删除失败（原视频保留）：\(error.localizedDescription)")
+                                AppLog.delete("Delete failed（原视频保留）：\(error.localizedDescription)")
                                 self.error = (error as? AppError) ?? .deleteOriginalFailed(error.localizedDescription)
                             }
                         }
                     } catch {
-                        AppLog.photo("保存失败（原视频保留）：\(error.localizedDescription)")
+                        AppLog.photo("Save failed（原视频保留）：\(error.localizedDescription)")
                         temp.remove(outputURL)
                         tasks[idx].status = .failure((error as? AppError) ?? .saveToPhotoFailed(error.localizedDescription))
+                        self.writeHistory(Self.failedEntry(for: items[idx], profile: profile))
                     }
                 } catch is CancellationError {
                     tasks[idx].status = .cancelled
@@ -143,19 +165,50 @@ final class CompressionSession: ObservableObject {
                     if e.isCancellation {
                         tasks[idx].status = .cancelled
                     } else {
-                        AppLog.compress("任务失败：\(e.errorDescription) - \(e.recoverySuggestion)")
+                        AppLog.compress("Task failed：\(e.errorDescription) - \(e.recoverySuggestion)")
                         tasks[idx].status = .failure(e)
+                        self.writeHistory(Self.failedEntry(for: items[idx], profile: profile))
                     }
                 } catch {
-                    AppLog.compress("任务失败（未知）：\(error.localizedDescription)")
+                    AppLog.compress("Task failed（未知）：\(error.localizedDescription)")
                     tasks[idx].status = .failure(.unknown(error.localizedDescription))
+                    self.writeHistory(Self.failedEntry(for: items[idx], profile: profile))
                 }
             }
 
             overallProgress = 1.0
-            isRunning = false
-            AppLog.compress("任务结束：成功 \(successCount) / noGain \(noGainCount) / 失败 \(failureCount)")
+            phase = service.isCancelledFlag ? .cancelled : .completed
+            AppLog.compress("Run finished：成功 \(successCount) / noGain \(noGainCount) / 失败 \(failureCount)，节省 \(Formatters.bytes(savedBytesSoFar))")
         }
+    }
+
+    // MARK: - 私有
+
+    /// 历史写入（统一入口，带日志，真实结果）。
+    private func writeHistory(_ entry: HistoryEntry) {
+        AppLog.history("Write started：\(entry.name)，outcome=\(entry.outcome)")
+        history.add(entry)
+        AppLog.history("Write succeeded：\(entry.name)")
+    }
+
+    /// 失败条目：未产生输出，compressedBytes 记为 originalBytes（不假装节省）。
+    private static func failedEntry(for item: VideoItem, profile: CompressionProfile) -> HistoryEntry {
+        HistoryEntry(
+            id: UUID(),
+            name: item.title,
+            originalBytes: item.fileSizeBytes,
+            compressedBytes: item.fileSizeBytes,
+            savedBytes: 0,
+            date: Date(),
+            mode: profile.modeDisplayName,
+            sourceResolution: "\(item.width)×\(item.height)",
+            outputResolution: "\(item.width)×\(item.height)",
+            sourceCodec: item.codecDescription,
+            outputCodec: item.codecDescription,
+            durationSeconds: item.durationSeconds,
+            savedAssetLocalIdentifier: nil,
+            outcome: "failed"
+        )
     }
 
     func cancel() {

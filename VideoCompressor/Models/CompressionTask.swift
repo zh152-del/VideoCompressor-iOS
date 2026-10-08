@@ -1,9 +1,12 @@
 import Foundation
 
 /// 批量压缩中单个任务的状态。
+/// 阶段粒度：pending → compressing → saving → success/noGain/failure/cancelled。
 enum TaskStatus {
     case pending
     case compressing(progress: Double)
+    /// 编码完成，正在保存到照片图库（用户可见的中间阶段，防止"卡死"错觉）。
+    case saving
     case success(CompressionResult)
     /// 未节省空间：压缩后体积不小于原体积，输出已删除、原视频保留。
     case noGain(CompressionResult)
@@ -12,6 +15,11 @@ enum TaskStatus {
 
     var isCompressing: Bool {
         if case .compressing = self { return true }
+        return false
+    }
+
+    var isSaving: Bool {
+        if case .saving = self { return true }
         return false
     }
 
@@ -32,6 +40,7 @@ enum TaskStatus {
         switch self {
         case .pending:           return "等待中"
         case .compressing:       return "压缩中"
+        case .saving:            return "保存到照片…"
         case .success:           return "已完成"
         case .noGain:            return "未节省空间"
         case .failure:           return "失败"

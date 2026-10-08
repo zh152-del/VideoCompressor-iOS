@@ -25,8 +25,8 @@ struct CompressionResult: Identifiable {
     /// 实际节省的字节数（可能为负，表示体积增加）。
     var savedBytes: Int64 { item.fileSizeBytes - outputSizeBytes }
 
-    /// 生成本次压缩对应的历史记录条目。
-    func historyEntry(savedID: String?) -> HistoryEntry {
+    /// 生成本次压缩对应的历史记录条目。outcome: "saved" / "noGain" / "failed"
+    func historyEntry(savedID: String?, outcome: String = "saved") -> HistoryEntry {
         HistoryEntry(
             id: UUID(),
             name: item.title,
@@ -40,7 +40,8 @@ struct CompressionResult: Identifiable {
             sourceCodec: item.codecDescription,
             outputCodec: outputCodec,
             durationSeconds: durationSeconds,
-            savedAssetLocalIdentifier: savedID
+            savedAssetLocalIdentifier: savedID,
+            outcome: outcome
         )
     }
 }

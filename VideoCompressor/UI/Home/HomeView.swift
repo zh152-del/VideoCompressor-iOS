@@ -190,10 +190,23 @@ struct HomeView: View {
         return "所选视频码率已较低，可能无法再压缩"
     }
 
-    // MARK: - 底部操作区（真实状态：idle disabled / 压缩中文案联动）
+    // MARK: - 底部操作区（按钮状态由 session.phase 驱动，点击后立即变化）
 
     private var bottomBar: some View {
         let busy = session.isRunning
+        let buttonTitle: String = {
+            switch session.phase {
+            case .preparing:
+                return "准备压缩…"
+            case .running:
+                if let i = session.currentIndex {
+                    return "正在压缩 \(i + 1) / \(session.tasks.count)"
+                }
+                return "正在压缩…"
+            default:
+                return "开始压缩"
+            }
+        }()
         return VStack(spacing: 12) {
             HStack {
                 Text("\(selected.count) 个视频")
@@ -207,15 +220,17 @@ struct HomeView: View {
             Button {
                 startCompression()
             } label: {
-                Text(busy ? "正在压缩…" : "开始压缩")
+                Text(buttonTitle)
                     .font(.body.weight(.semibold))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 13)
                     .background(Capsule().fill(busy ? Color.accentColor.opacity(0.5) : Color.accentColor))
                     .foregroundStyle(.white)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(PressableButtonStyle())
             .disabled(busy)
+            .accessibilityHint(busy ? "压缩任务进行中" : "开始压缩所选视频")
         }
         .padding(16)
         .floatSurface(cornerRadius: 22)

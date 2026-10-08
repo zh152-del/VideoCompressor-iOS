@@ -13,7 +13,15 @@ final class TempFileManager: ObservableObject {
         let base = FileManager.default.temporaryDirectory
         self.directory = base.appendingPathComponent("VideoCompressor", isDirectory: true)
         try? FileManager.default.createDirectory(at: self.directory, withIntermediateDirectories: true)
-        cleanupStale()
+        // 启动清理放到后台线程：避免主线程 IO 拖慢冷启动（目录只含本应用临时产物，量小但仍是磁盘操作）
+        let dir = self.directory
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            let contents = (try? FileManager.default.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil)) ?? []
+            contents.forEach { try? FileManager.default.removeItem(at: $0) }
+            DispatchQueue.main.async { [weak self] in
+                self?.refreshOccupied()
+            }
+        }
     }
 
     func newOutputURL(ext: String = "mp4") -> URL {

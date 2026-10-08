@@ -28,7 +28,10 @@ struct VideoPicker: UIViewControllerRepresentable {
 
         func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
             parent.dismiss()
-            guard !results.isEmpty else { return }
+            guard !results.isEmpty else {
+                AppLog.ui("用户取消选择视频")
+                return
+            }
             Task { await parent.process(results) }
         }
     }

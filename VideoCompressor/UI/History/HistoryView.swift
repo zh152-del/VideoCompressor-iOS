@@ -88,29 +88,48 @@ struct HistoryView: View {
     }
 }
 
-/// 历史条目行：缩略图 + 名称 + 大小变化 + 右侧状态。
+/// 历史条目行：缩略图占位省略，文字驱动；状态严格按真实 outcome 显示。
 struct HistoryRow: View {
     let entry: HistoryEntry
-
-    private var isNoGain: Bool { entry.compressedBytes >= entry.originalBytes }
 
     var body: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 3) {
                 Text(entry.name).font(.subheadline.weight(.medium)).lineLimit(1)
-                Text("\(Formatters.bytes(entry.originalBytes)) → \(Formatters.bytes(entry.compressedBytes))")
-                    .font(.caption).foregroundStyle(.secondary)
-                Text(Formatters.sizeChangeText(original: entry.originalBytes,
-                                               compressed: entry.compressedBytes))
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(isNoGain ? Color.orange : Color.green)
+                if entry.outcome == "failed" {
+                    Text("\(Formatters.bytes(entry.originalBytes)) · 压缩失败")
+                        .font(.caption).foregroundStyle(.red)
+                } else {
+                    Text("\(Formatters.bytes(entry.originalBytes)) → \(Formatters.bytes(entry.compressedBytes))")
+                        .font(.caption).foregroundStyle(.secondary)
+                    Text(Formatters.sizeChangeText(original: entry.originalBytes,
+                                                   compressed: entry.compressedBytes))
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(entry.isEffective ? Color.green : Color.orange)
+                }
             }
             Spacer()
-            Text(isNoGain ? "未节省" : "已完成")
+            Text(statusLabel)
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(statusColor)
         }
         .padding(.vertical, 2)
         .contentShape(Rectangle())
+    }
+
+    private var statusLabel: String {
+        switch entry.outcome {
+        case "noGain":  return "未节省"
+        case "failed":  return "失败"
+        default:        return "已完成"
+        }
+    }
+
+    private var statusColor: Color {
+        switch entry.outcome {
+        case "noGain":  return .orange
+        case "failed":  return .red
+        default:        return .secondary
+        }
     }
 }

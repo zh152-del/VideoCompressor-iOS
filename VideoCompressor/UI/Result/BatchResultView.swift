@@ -71,16 +71,28 @@ struct BatchResultView: View {
 }
 
 /// 单个压缩结果详情（只读展示：状态、大小对比、技术参数）。
-/// 保存/删除已由批量管道自动完成，这里仅呈现事实。
+/// 保存已由管道自动完成；自动删除关闭时，提供手动「删除原视频」入口（仅保存成功后可用）。
 struct ResultDetailPage: View {
     let result: CompressionResult
     let status: TaskStatus
+    @EnvironmentObject var settings: SettingsStore
+    @State private var deleted = false
+    @State private var deleting = false
+    @State private var deleteError: String?
+
+    private var canManualDelete: Bool {
+        if case .success = status {} else { return false }
+        return deleted == false &&
+               settings.deleteOriginalAfterSave == false &&
+               (result.item.localIdentifier ?? "").isEmpty == false
+    }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 statusHeader
                 sizeSection
+                manualDeleteSection
                 detailsSection
             }
             .padding(20)
@@ -88,6 +100,48 @@ struct ResultDetailPage: View {
         .scrollIndicators(.hidden)
         .navigationBarTitleDisplayMode(.inline)
         .navigationTitle(result.item.title)
+    }
+
+    @ViewBuilder
+    private var manualDeleteSection: some View {
+        if canManualDelete {
+            VStack(spacing: 8) {
+                Button {
+                    deleting = true
+                    Task {
+                        do {
+                            guard let orig = result.item.localIdentifier else { return }
+                            AppLog.delete("Delete started（手动）：\(result.item.title)")
+                            try await PhotoLibraryService.shared.deleteOriginal(localIdentifier: orig)
+                            AppLog.delete("Delete succeeded（手动）：\(result.item.title)")
+                            deleted = true
+                        } catch {
+                            AppLog.delete("Delete failed（手动）：\(error.localizedDescription)")
+                            deleteError = error.localizedDescription
+                        }
+                        deleting = false
+                    }
+                } label: {
+                    Label(deleting ? "删除中…" : "删除原视频", systemImage: "trash")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.red)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(Color(.secondarySystemBackground),
+                                    in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(PressableButtonStyle())
+                .disabled(deleting)
+                if let err = deleteError {
+                    Text("删除失败：\(err)。原视频仍保留在照片图库中。")
+                        .font(.caption).foregroundStyle(.red)
+                }
+            }
+        } else if deleted {
+            Label("原视频已删除", systemImage: "trash.fill")
+                .font(.subheadline).foregroundStyle(.secondary)
+        }
     }
 
     @ViewBuilder

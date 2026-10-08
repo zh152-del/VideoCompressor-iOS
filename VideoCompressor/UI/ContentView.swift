@@ -2,9 +2,13 @@ import SwiftUI
 
 /// 应用根视图。
 ///
-/// 状态保持关键设计：三个页面【常驻】ZStack 中，用 opacity + allowsHitTesting 切换，
-/// 绝不使用 `switch tab { case ... }` 条件渲染（那会销毁页面、丢失已选视频等状态）。
-/// 底部导航为实底浮层（无实时 blur），当前 Tab 有明确的背景胶囊选区。
+/// 页面容器策略（第二版定稿）：**只渲染当前 Tab**（switch 条件渲染）。
+/// 之所以现在可以安全使用 switch：所有跨页面状态（已选视频 / 压缩模式 / 压缩会话 /
+/// 进度页开关）都保存在共享 AppState（App 根部唯一实例），页面本身只承载
+/// 瞬态 UI 状态，切换销毁不会丢失任何用户数据，也避免三页常驻带来的
+/// 额外 View 更新与布局开销。
+///
+/// 底部 FloatingTabBar 由 ContentView 独立负责；HomeView 不承担全局导航职责。
 enum AppTab: String, CaseIterable {
     case compress, history, settings
 
@@ -31,26 +35,17 @@ struct ContentView: View {
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            // 页面层：常驻不销毁，仅切换可见性与点击
-            ZStack {
-                page(HomeView(), tab: .compress)
-                page(HistoryView(), tab: .history)
-                page(SettingsView(), tab: .settings)
+            // 只渲染当前页面；压缩任务在 AppState.session 中继续，不受页面切换影响
+            switch tab {
+            case .compress: HomeView()
+            case .history:  HistoryView()
+            case .settings: SettingsView()
             }
 
             FloatingTabBar(tab: $tab)
                 .padding(.horizontal, 40)
                 .padding(.bottom, 6)
         }
-    }
-
-    @ViewBuilder
-    private func page(_ view: some View, tab t: AppTab) -> some View {
-        let active = (tab == t)
-        view
-            .opacity(active ? 1 : 0)
-            .allowsHitTesting(active)
-            .accessibilityHidden(!active)
     }
 }
 
@@ -64,8 +59,8 @@ struct FloatingTabBar: View {
                 let selected = (tab == t)
                 Button {
                     guard tab != t else { return }
-                    AppLog.ui("切换 Tab → \(t.title)")
-                    withAnimation(.easeOut(duration: 0.15)) { tab = t }
+                    AppLog.ui("Tab changed → \(t.title)")
+                    withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) { tab = t }
                 } label: {
                     VStack(spacing: 3) {
                         Image(systemName: t.icon)

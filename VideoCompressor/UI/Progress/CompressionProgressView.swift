@@ -48,11 +48,14 @@ struct CompressionProgressView: View {
                 VStack(spacing: 6) {
                     Text("当前视频").font(.caption).foregroundStyle(.secondary)
                     Text(current.item.title).font(.headline).lineLimit(1)
-                    Text("\(Formatters.bytes(current.item.fileSizeBytes)) → 压缩中")
+                    // 阶段文案：让用户知道 App 正在工作，不是卡死
+                    stageText(for: current)
                         .font(.caption).foregroundStyle(.secondary)
-                    ProgressBar(value: current.progressValue)
-                        .padding(.horizontal, 40)
-                        .padding(.top, 6)
+                    if current.status.isCompressing {
+                        ProgressBar(value: current.progressValue)
+                            .padding(.horizontal, 40)
+                            .padding(.top, 6)
+                    }
                 }
                 .padding(.top, 26)
             }
@@ -82,6 +85,18 @@ struct CompressionProgressView: View {
         .frame(maxWidth: .infinity)
     }
 
+    /// 当前阶段文案。
+    private func stageText(for task: CompressionTaskModel) -> String {
+        switch task.status {
+        case .compressing(let p):
+            return "\(Formatters.bytes(task.item.fileSizeBytes)) → 编码中… \(Formatters.percent(p))"
+        case .saving:
+            return "编码完成，验证输出并保存到照片…"
+        default:
+            return "准备中…"
+        }
+    }
+
     // MARK: - 完成总结
 
     private var summaryView: some View {
@@ -95,7 +110,7 @@ struct CompressionProgressView: View {
             .padding(.top, 56)
 
             VStack(spacing: 8) {
-                countRow(text: "成功压缩 \(session.successCount) 个", color: .green)
+                countRow(text: "成功压缩 \(session.successCount) 个（已保存到照片）", color: .green)
                 if session.noGainCount > 0 {
                     countRow(text: "未节省空间 \(session.noGainCount) 个（原视频已保留）", color: .orange)
                 }
@@ -238,6 +253,8 @@ struct TaskResultRow: View {
                 .foregroundStyle(.orange)
         case .failure(let e):
             Text(e.errorDescription).foregroundStyle(.red)
+        case .saving:
+            Text("保存到照片…").foregroundStyle(.secondary)
         case .cancelled:
             Text("已取消").foregroundStyle(.secondary)
         case .pending:
