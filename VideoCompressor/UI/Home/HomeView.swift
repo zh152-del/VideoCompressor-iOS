@@ -262,7 +262,7 @@ struct HomeView: View {
             return
         }
         guard !session.isRunning else { return }
-        AppLog.compress("selectedVideos=1，profile=\(profile.mode.displayName)，source=\(Formatters.bytes(item.fileSizeBytes))")
+        AppLog.compress("selectedVideos=\(selected.count)，profile=\(profile.mode.displayName)，总计=\(Formatters.bytes(selected.reduce(0) { $0 + $1.fileSizeBytes }))")
         session.run(items: selected, profile: profile, settings: settings) { startError in
             // 启动失败必须可见，绝不静默
             Task { @MainActor in error = startError }
