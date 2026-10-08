@@ -23,3 +23,26 @@ final class FormattersTests: XCTestCase {
         XCTAssertTrue(s.contains("69.6%"))
     }
 }
+
+final class FormattersSizeChangeTests: XCTestCase {
+    /// 31.4 MB → 62.6 MB：必须显示「体积增加 99.4%」，绝不能显示「约 0.0%」
+    func testBiggerOutputShowsIncrease() {
+        let t = Formatters.sizeChangeText(original: 31_400_000, compressed: 62_600_000)
+        XCTAssertTrue(t.contains("99.4%"), "实际: \(t)")
+        XCTAssertTrue(t.contains("体积增加"))
+        XCTAssertFalse(t.contains("0.0%"))
+    }
+
+    /// 31.4 MB → 20 MB：节省 36.3%
+    func testSmallerOutputShowsSaving() {
+        let t = Formatters.sizeChangeText(original: 31_400_000, compressed: 20_000_000)
+        XCTAssertTrue(t.contains("36.3%"), "实际: \(t)")
+        XCTAssertTrue(t.contains("节省"))
+    }
+
+    /// 100 MB → 40 MB：节省 60%
+    func testSixtyPercentSaving() {
+        let t = Formatters.sizeChangeText(original: 100_000_000, compressed: 40_000_000)
+        XCTAssertTrue(t.contains("60.0%"), "实际: \(t)")
+    }
+}

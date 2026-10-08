@@ -10,6 +10,8 @@ struct TranscodeOptions {
     var quality: Double = 0.7
     var codec: VideoCodec = .hevc
     var targetSizeBytes: Int64? = nil
+    /// 显式视频码率(bps)。设置后优先于 quality / targetSizeBytes 计算。
+    var explicitBitrate: Int64? = nil
 }
 
 /// 自定义转码引擎：AVAssetReader + AVAssetWriter（走 VideoToolbox 硬件编码）。
@@ -50,7 +52,9 @@ struct TranscodeEngine {
         // 计算码率：目标文件大小优先，否则按画质系数。设下限避免极低码率让编码器会话异常。
         let bitrate: Int64 = {
             let raw: Int64
-            if let t = options.targetSizeBytes {
+            if let explicit = options.explicitBitrate {
+                raw = explicit
+            } else if let t = options.targetSizeBytes {
                 raw = BitrateCalculator.bitrate(targetBytes: t, durationSeconds: duration)
             } else {
                 raw = BitrateCalculator.bitrate(quality: options.quality, height: outH)

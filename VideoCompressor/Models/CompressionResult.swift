@@ -1,10 +1,13 @@
 import Foundation
 
-/// 单个视频的压缩结果（输出文件位于临时目录，待用户保存到图库）。
+/// 单个视频的压缩结果。
+/// `noGain == true` 表示未能有效压缩（输出体积 ≥ 原体积或预估无法缩小）：
+/// 此时 `outputURL` 为 nil、输出文件已被删除、原视频必须保留。
 struct CompressionResult: Identifiable {
     let id = UUID()
     let item: VideoItem
-    let outputURL: URL
+    /// 压缩产物文件（位于临时目录）。noGain 时为 nil。
+    let outputURL: URL?
     let outputSizeBytes: Int64
     let outputWidth: Int
     let outputHeight: Int
@@ -13,6 +16,14 @@ struct CompressionResult: Identifiable {
     let profile: CompressionProfile
     /// 保存到图库成功后记录的资源标识。
     var savedPhotoLocalIdentifier: String?
+    /// 是否「未节省空间」（压缩后体积不小于原体积，或预估无压缩空间）。
+    var noGain: Bool = false
+
+    /// 是否为有效压缩（输出严格小于原始文件）。
+    var isEffective: Bool { !noGain && outputSizeBytes < item.fileSizeBytes }
+
+    /// 实际节省的字节数（可能为负，表示体积增加）。
+    var savedBytes: Int64 { item.fileSizeBytes - outputSizeBytes }
 
     /// 生成本次压缩对应的历史记录条目。
     func historyEntry(savedID: String?) -> HistoryEntry {
@@ -21,7 +32,7 @@ struct CompressionResult: Identifiable {
             name: item.title,
             originalBytes: item.fileSizeBytes,
             compressedBytes: outputSizeBytes,
-            savedBytes: item.fileSizeBytes - outputSizeBytes,
+            savedBytes: savedBytes,
             date: Date(),
             mode: profile.modeDisplayName,
             sourceResolution: "\(item.width)×\(item.height)",

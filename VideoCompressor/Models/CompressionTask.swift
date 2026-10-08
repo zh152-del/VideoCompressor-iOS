@@ -5,6 +5,8 @@ enum TaskStatus {
     case pending
     case compressing(progress: Double)
     case success(CompressionResult)
+    /// 未节省空间：压缩后体积不小于原体积，输出已删除、原视频保留。
+    case noGain(CompressionResult)
     case failure(AppError)
     case cancelled
 
@@ -18,13 +20,30 @@ enum TaskStatus {
         return false
     }
 
+    /// 是否为终态（不再变化）。
+    var isFinished: Bool {
+        switch self {
+        case .success, .noGain, .failure, .cancelled: return true
+        default: return false
+        }
+    }
+
     var title: String {
         switch self {
         case .pending:           return "等待中"
         case .compressing:       return "压缩中"
         case .success:           return "已完成"
+        case .noGain:            return "未节省空间"
         case .failure:           return "失败"
         case .cancelled:         return "已取消"
+        }
+    }
+
+    /// 关联的结果（终态且存在结果时）。
+    var result: CompressionResult? {
+        switch self {
+        case .success(let r), .noGain(let r): return r
+        default: return nil
         }
     }
 }

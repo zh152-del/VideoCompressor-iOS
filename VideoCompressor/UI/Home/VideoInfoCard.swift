@@ -1,36 +1,38 @@
 import SwiftUI
 
-/// 已选视频的信息卡片。
-struct VideoInfoCard: View {
+/// 已选视频列表行：小圆角缩略图 + 名称 + 大小·时长，右侧轻量状态。
+/// 不使用巨大卡片，行间用轻分隔线（由父级控制）。
+struct VideoRow: View {
     let item: VideoItem
     var onRemove: (() -> Void)? = nil
 
     var body: some View {
         HStack(spacing: 12) {
-            RoundedRectangle(cornerRadius: 10)
-                .fill(Color(.systemFill))
-                .frame(width: 64, height: 64)
-                .overlay {
-                    AsyncThumbnail(url: item.thumbnailURL)
-                        .frame(width: 64, height: 64)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                }
-            VStack(alignment: .leading, spacing: 4) {
-                Text(item.title).font(.subheadline.weight(.semibold)).lineLimit(1)
-                Text("\(item.width)×\(item.height) · \(Formatters.bytes(item.fileSizeBytes))")
-                    .font(.caption).foregroundStyle(.secondary)
-                Text("\(Formatters.time(item.durationSeconds)) · \(Int(item.fps))fps · \(item.codecDescription)")
-                    .font(.caption).foregroundStyle(.secondary)
+            AsyncThumbnail(url: item.thumbnailURL)
+                .frame(width: 52, height: 52)
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(item.title)
+                    .font(.subheadline.weight(.medium))
+                    .lineLimit(1)
+                Text("\(Formatters.bytes(item.fileSizeBytes)) · \(Formatters.time(item.durationSeconds))")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
+
             Spacer()
+
             if let onRemove {
                 Button(action: onRemove) {
-                    Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 18))
+                        .foregroundStyle(.tertiary)
                 }
+                .buttonStyle(.plain)
             }
         }
-        .padding(12)
-        .background(Color(.secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .padding(.vertical, 8)
+        .contentShape(Rectangle())
     }
 }
