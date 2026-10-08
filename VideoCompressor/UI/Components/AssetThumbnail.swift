@@ -50,7 +50,7 @@ struct AssetThumbnail: View {
             options.deliveryMode = .fastFormat
             options.isSynchronous = false
             let target = CGSize(width: side * 2, height: side * 2)   // @2x 列表小图
-            PHImageManager.default().requestImage(forAsset: asset,
+            PHImageManager.default().requestImage(for: asset,
                                                    targetSize: target,
                                                    contentMode: .aspectFill,
                                                    options: options) { img, _ in
