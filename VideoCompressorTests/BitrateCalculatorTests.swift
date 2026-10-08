@@ -46,8 +46,8 @@ final class BitrateCalculatorTargetTests: XCTestCase {
         XCTAssertNotNil(r)
         let bps = r!
         XCTAssertLessThan(bps, 60_000_000, "目标码率必须低于源")
-        // 且被参考码率上限约束
-        XCTAssertLessThanOrEqual(bps, 5_000_000)
+        // 且被参考码率上限约束（1080p 参考码率 8Mbps）
+        XCTAssertLessThanOrEqual(bps, 8_000_000)
     }
 
     /// 系数排序：quick > balanced > high
