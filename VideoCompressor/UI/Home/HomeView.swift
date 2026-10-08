@@ -374,7 +374,6 @@ struct HomeView: View {
             case .running:
                 if let i = session.currentIndex { return "正在压缩 \(i + 1) / \(session.tasks.count)" }
                 return "正在压缩…"
-            case .recording: return "正在压缩…"
             default: return "开始压缩"
             }
         }()
@@ -478,7 +477,7 @@ struct HomeView: View {
         }
         AppLog.compress("selectedVideos=\(items.count)，profile=\(profile.mode.displayName)，group=\(activeGroupIndex.map { "\($0 + 1)" } ?? "无")")
         session.run(items: items, profile: profile, settings: settings,
-                    groupIndex: activeGroupIndex, skippedCount: skippedCount) { startError in
+                    groupIndex: activeGroupIndex, priorSkippedCount: skippedCount) { startError in
             Task { @MainActor in error = startError }
         }
         appState.showProgressCover = true
