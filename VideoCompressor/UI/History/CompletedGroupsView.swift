@@ -198,12 +198,8 @@ private struct GroupItemRow: View {
                 default:
                     Text("已跳过").font(.caption).foregroundStyle(.secondary)
                 }
-                HStack(spacing: 6) {
-                    Text(ProcessedMark.isProcessed(filename: item.filename) ? "__VC__ ✓" : "无标记")
-                        .font(.caption2).foregroundStyle(.secondary)
-                    if item.removed {
-                        Text("已移出本组").font(.caption2).foregroundStyle(.orange)
-                    }
+                if item.removed {
+                    Text("已移出本组").font(.caption2).foregroundStyle(.orange)
                 }
             }
             Spacer()

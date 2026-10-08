@@ -9,7 +9,7 @@ struct GroupItemSnapshot: Codable, Identifiable {
     let originalBytes: Int64
     var compressedBytes: Int64?  // nil = 未产出（失败/跳过）
     let outcome: String          // saved / failed / skipped
-    var removed: Bool            // 已被用户移出本组（非删除！__VC__ 文件名保持不动）
+    var removed: Bool            // 已被用户移出本组（非删除！视频与相册资源保持不动）
     var savedAssetID: String?    // 压缩成品 PHAsset 标识
 
     var effectiveOutcome: String { removed ? "removed" : outcome }

@@ -1,21 +1,6 @@
 import Foundation
 import Photos
 
-/// 标记常量：压缩成功的视频文件名会包含该字符串。
-/// 只存在于【压缩成品】的 PHAsset originalFilename 中（保存时命名，零重编码）。
-enum ProcessedMark {
-    static let marker = "__VC__"
-    /// 文件名是否已压缩。
-    static func isProcessed(filename: String) -> Bool { filename.contains(marker) }
-    /// 压缩成品保存名：原名去扩展 + __VC__ + 扩展名。重复压缩不会叠加标记。
-    static func markedName(for title: String) -> String {
-        let ns = title as NSString
-        let base = ns.deletingPathExtension.replacingOccurrences(of: marker, with: "")
-        let ext = ns.pathExtension.isEmpty ? "mp4" : ns.pathExtension
-        return "\(base)\(marker).\(ext)"
-    }
-}
-
 /// 首页扫描到的视频。
 struct ScannedVideo: Identifiable {
     let id: String              // PHAsset.localIdentifier
@@ -40,8 +25,6 @@ struct ScannedVideo: Identifiable {
         }
         return simplify(pixelWidth, pixelHeight)
     }
-    /// 已压缩识别：文件名包含 __VC__ 标记。
-    var isProcessed: Bool { ProcessedMark.isProcessed(filename: filename) }
 }
 
 /// 相册视频扫描器：启动后按需扫描，只读元数据（文件名/大小/时长/尺寸），
@@ -105,21 +88,3 @@ final class PhotoScanner: ObservableObject {
         status = items.isEmpty ? .done(count: 0) : (auth == .limited ? .limited : .done(count: items.count))
         AppLog.videoScan("Asset Count=\(items.count)，含 __VC__ 标记 \(processed) 个")
     }
-
-    /// 全部带 __VC__ 标记的 PHAsset（设置页"清除标记"用）。
-    static func fetchProcessedAssets() -> [PHAsset] {
-        let options = PHFetchOptions()
-        options.predicate = NSPredicate(format: "mediaType == %d", PHAssetMediaType.video.rawValue)
-        let fetch = PHAsset.fetchAssets(with: .video, options: options)
-        var result: [PHAsset] = []
-        for i in 0..<fetch.count {
-            let asset = fetch.object(at: i)
-            let resources = PHAssetResource.assetResources(for: asset)
-            if let name = (resources.first { $0.type == .video } ?? resources.first)?.originalFilename,
-               ProcessedMark.isProcessed(filename: name) {
-                result.append(asset)
-            }
-        }
-        return result
-    }
-}

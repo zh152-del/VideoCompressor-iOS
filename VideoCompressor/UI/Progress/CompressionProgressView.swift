@@ -40,7 +40,7 @@ struct CompressionProgressView: View {
                 if let gi = session.currentGroupIndex {
                     Text("第\(gi + 1)组").font(.subheadline).foregroundStyle(.secondary)
                 }
-                Text(session.phase == .recording ? "记录压缩状态" : "正在压缩").font(.title2.bold())
+                Text("正在压缩").font(.title2.bold())
                 Text("\(session.finishedCount) / \(session.tasks.count)")
                     .font(.system(size: 44, weight: .bold, design: .rounded))
                     .foregroundStyle(Color.accentColor)
@@ -73,19 +73,6 @@ struct CompressionProgressView: View {
                     .padding(.top, 16)
             }
 
-            // __VC__ 标记验证进度（组压缩完成后，逐个真实确认，绝不静默）
-            if let mp = session.markProgress {
-                VStack(spacing: 8) {
-                    Text("正在记录压缩状态 \(mp.done) / \(mp.total)")
-                        .font(.subheadline.weight(.medium))
-                    if mp.total > 0 {
-                        ProgressView(value: Double(mp.done) / Double(mp.total))
-                            .padding(.horizontal, 40)
-                    }
-                }
-                .padding(.top, 18)
-            }
-
             // 失败视频列表：实时更新（每失败一个立即出现，不等批次结束）
             let failures = session.tasks.filter {
                 if case .failure = $0.status { return true } else { return false }
@@ -111,22 +98,6 @@ struct CompressionProgressView: View {
                 .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .padding(.horizontal, 24)
                 .padding(.top, 14)
-            }
-
-            // 标记失败：如实列出，不假装全部成功（用户可去设置清除后重试）
-            if !session.markFailedTitles.isEmpty {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("标记失败 \(session.markFailedTitles.count) 个（压缩结果不受影响）")
-                        .font(.caption.weight(.medium)).foregroundStyle(.orange)
-                    ForEach(session.markFailedTitles, id: \.self) { name in
-                        Text("\(name) 标记失败").font(.caption2).foregroundStyle(.orange)
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(12)
-                .background(Color.orange.opacity(0.08), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .padding(.horizontal, 24)
-                .padding(.top, 12)
             }
 
             Spacer()

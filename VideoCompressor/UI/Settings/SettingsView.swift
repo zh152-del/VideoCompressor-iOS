@@ -6,11 +6,8 @@ struct SettingsView: View {
     @EnvironmentObject var settings: SettingsStore
     @EnvironmentObject var temp: TempFileManager
     @State private var confirmClean = false
-    @State private var clearingMarks = false
-    @State private var markResult: String? = nil
-    @State private var clearProgress: (done: Int, total: Int)? = nil
-    @State private var confirmClearMarks = false
-    @State private var pendingMarkAssets: [PHAsset] = []
+    @ObservedObject private var fingerprintStore = FingerprintStore.shared
+    @State private var showFolderPicker = false
 
     var body: some View {
         NavigationStack {
@@ -36,47 +33,29 @@ struct SettingsView: View {
                     Picker("已压缩视频", selection: $settings.processedPolicy) {
                         ForEach(ProcessedPolicy.allCases) { p in Text(p.displayName).tag(p) }
                     }
-                    if settings.processedPolicy == .ask {
-                        Text("每次询问：开始压缩时对已压缩视频弹窗，选择跳过或重新压缩。")
-                            .font(.caption).foregroundStyle(.secondary)
-                    }
                 } header: {
                     Text("已压缩视频处理方式")
                 } footer: {
-                    Text("压缩成功的成品会以「原名__VC__」命名保存（不重编码、不改变内容），重装 App 后仍可识别。")
+                    Text("通过视频指纹（画面感知哈希 + 时长 + 比例）识别已压缩视频。指纹保存在沙盒库与你自己指定的文件夹日志中，重装 App 后从日志文件恢复。")
                 }
                 Section {
+                    HStack {
+                        Text("指纹文件夹")
+                        Spacer()
+                        Text(fingerprintStore.hasFolderAccess ? "已授权" : "未选择")
+                            .foregroundStyle(fingerprintStore.hasFolderAccess ? Color.green : Color.secondary)
+                    }
+                    Text("已记录指纹 \(fingerprintStore.records.count) 条")
+                        .font(.caption).foregroundStyle(.secondary)
                     Button {
-                        pendingMarkAssets = PhotoScanner.fetchProcessedAssets()
-                        confirmClearMarks = true
+                        showFolderPicker = true
                     } label: {
-                        Text(clearingMarks ? "清除中…" : "清除所有已压缩标记").foregroundStyle(.red)
+                        Text("选择指纹日志文件夹").foregroundStyle(Color.accentColor)
                     }
-                    .disabled(clearingMarks)
-                    if let p = clearProgress {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("正在移除压缩标记 \(p.done) / \(p.total)")
-                                .font(.caption.weight(.medium))
-                            ProgressView(value: p.total > 0 ? Double(p.done) / Double(p.total) : 0)
-                        }
-                    }
-                    if let r = markResult {
-                        Text(r).font(.caption).foregroundStyle(.secondary)
-                    }
+                    Text("选择一个你自己创建的文件夹，App 会把每条压缩记录的指纹日志写入其中。重装或更新 App 后，重新选择同一文件夹即可自动恢复指纹记录。")
+                        .font(.caption).foregroundStyle(.secondary)
                 } header: {
-                    Text("压缩标记管理（标记：__VC__）")
-                } footer: {
-                    Text("清除标记 = 字节级复制并以原文件名重建，然后删除带标记的旧资源。视频内容不变，可正常播放。删除需系统确认。")
-                }
-                .confirmationDialog(
-                    "发现 \(pendingMarkAssets.count) 个已压缩标记",
-                    isPresented: $confirmClearMarks, titleVisibility: .visible) {
-                    Button("继续清除", role: .destructive) {
-                        clearAllMarks()
-                    }
-                    Button("取消", role: .cancel) { pendingMarkAssets = [] }
-                } message: {
-                    Text("清除后 App 将不再通过 __VC__ 识别这些视频为已压缩。不会删除视频、不会删除照片资源、不会清除历史记录。")
+                    Text("视频指纹")
                 }
                 Section("外观") {
                     Picker("主题", selection: $settings.appearance) {
@@ -111,6 +90,11 @@ struct SettingsView: View {
                     .padding(.bottom, 6)
                     .background(Color(.systemGroupedBackground))
             }
+            .sheet(isPresented: $showFolderPicker) {
+                FolderPicker { url in
+                    fingerprintStore.setFolder(from: url)
+                }
+            }
             .alert("清理临时文件？", isPresented: $confirmClean) {
                 Button("取消", role: .cancel) {}
                 Button("清理", role: .destructive) { temp.cleanupAll() }
@@ -120,33 +104,5 @@ struct SettingsView: View {
         }
     }
 
-    /// 批量清除标记：逐个执行并显示真实进度（x / N），失败如实列出，绝不后台静默。
-    private func clearAllMarks() {
-        let assets = pendingMarkAssets
-        guard !assets.isEmpty else { return }
-        clearingMarks = true
-        markResult = nil
-        clearProgress = (0, assets.count)
-        Task {
-            var ok = 0
-            var failed: [String] = []
-            for (i, asset) in assets.enumerated() {
-                let name = PHAssetResource.assetResources(for: asset).first?.originalFilename ?? "未知"
-                do {
-                    _ = try await PhotoLibraryService.shared.clearProcessedMark(on: asset)
-                    ok += 1
-                } catch {
-                    failed.append(name)
-                }
-                clearProgress = (i + 1, assets.count)
-            }
-            markResult = failed.isEmpty
-                ? "已移除 \(ok) / \(assets.count) 个标记，全部成功"
-                : "已移除 \(ok) / \(assets.count) 个标记；失败 \(failed.count) 个：\(failed.prefix(3).joined(separator: "、"))\(failed.count > 3 ? " 等" : "")"
-            clearProgress = nil
-            clearingMarks = false
-            pendingMarkAssets = []
-            AppLog.mark("批量清除完成：成功 \(ok)，失败 \(failed.count)")
-        }
-    }
+}
 }

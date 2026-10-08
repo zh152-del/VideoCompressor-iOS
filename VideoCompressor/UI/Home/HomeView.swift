@@ -9,6 +9,7 @@ struct HomeView: View {
     @EnvironmentObject var settings: SettingsStore
     @StateObject private var scanner = PhotoScanner()
     @ObservedObject private var groupStore = GroupStore.shared
+    @ObservedObject private var fingerprintStore = FingerprintStore.shared
     @State private var showPicker = false
     @State private var showSettingsPage = false
     @State private var error: AppError?
@@ -83,7 +84,7 @@ struct HomeView: View {
                                     set: { if !$0 { pendingRun = nil } }
                                 ), titleVisibility: .visible) {
                 Button("跳过这些视频") {
-                    let skipIDs = Set(pendingRun?.filter { $0.title.contains(ProcessedMark.marker) }.map { $0.id } ?? [])
+                    let skipIDs = Set((pendingRun ?? []).filter { fingerprintStore.knownByID($0.localIdentifier ?? $0.phAssetID) }.map { $0.id })
                     let remaining = (pendingRun ?? []).filter { !skipIDs.contains($0.id) }
                     launchRun(items: remaining, skippedCount: skipIDs.count)
                 }
@@ -112,7 +113,7 @@ struct HomeView: View {
 
     @State private var showCompletedGroups = false
     private var pendingProcessedCount: Int {
-        (pendingRun ?? []).filter { $0.title.contains(ProcessedMark.marker) }.count
+        (pendingRun ?? []).filter { fingerprintStore.knownByID($0.localIdentifier ?? $0.phAssetID) }.count
     }
 
     // MARK: - 顶部
@@ -235,6 +236,7 @@ struct HomeView: View {
                     ScanVideoRow(
                         video: video,
                         isSelected: selected.contains { $0.localIdentifier == video.id },
+                        isKnownProcessed: fingerprintStore.knownByID(video.id),
                         onToggle: { toggle(video) }
                     )
                 }
@@ -372,7 +374,7 @@ struct HomeView: View {
             case .running:
                 if let i = session.currentIndex { return "正在压缩 \(i + 1) / \(session.tasks.count)" }
                 return "正在压缩…"
-            case .recording: return "记录压缩状态…"
+            case .recording: return "正在压缩…"
             default: return "开始压缩"
             }
         }()
@@ -442,7 +444,7 @@ struct HomeView: View {
 
     /// 已压缩策略分发（skip / ask / recompress），随后启动。
     private func startRun(_ items: [VideoItem], skippedCount: Int) {
-        let processed = items.filter { $0.title.contains(ProcessedMark.marker) }
+        let processed = items.filter { fingerprintStore.knownByID($0.localIdentifier ?? $0.phAssetID) }
         switch settings.processedPolicy {
         case .skip where !processed.isEmpty:
             let remaining = items.filter { !processed.contains($0) }
@@ -487,6 +489,7 @@ struct HomeView: View {
 struct ScanVideoRow: View {
     let video: ScannedVideo
     let isSelected: Bool
+    let isKnownProcessed: Bool
     let onToggle: () -> Void
 
     var body: some View {
@@ -506,7 +509,7 @@ struct ScanVideoRow: View {
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 6) {
                         Text(video.filename).font(.subheadline.weight(.medium)).lineLimit(1)
-                        if video.isProcessed {
+                        if isKnownProcessed {
                             Text("已压缩")
                                 .font(.caption2.weight(.medium))
                                 .foregroundStyle(.green)

@@ -10,6 +10,8 @@ enum TaskStatus {
     case success(CompressionResult)
     /// 未节省空间：压缩后体积不小于原体积，输出已删除、原视频保留。
     case noGain(CompressionResult)
+    /// 已压缩识别命中，按用户策略跳过（不是失败）。
+    case skipped
     case failure(AppError)
     case cancelled
 
@@ -31,7 +33,7 @@ enum TaskStatus {
     /// 是否为终态（不再变化）。
     var isFinished: Bool {
         switch self {
-        case .success, .noGain, .failure, .cancelled: return true
+        case .success, .noGain, .failure, .cancelled, .skipped: return true
         default: return false
         }
     }
@@ -43,6 +45,7 @@ enum TaskStatus {
         case .saving:            return "保存到照片…"
         case .success:           return "已完成"
         case .noGain:            return "未节省空间"
+        case .skipped:           return "已跳过"
         case .failure:           return "失败"
         case .cancelled:         return "已取消"
         }
