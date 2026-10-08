@@ -26,6 +26,10 @@ final class CompressionSession: ObservableObject {
     @Published var error: AppError?
     /// 当前压缩的组号（0-based；非分组压缩为 nil）。
     @Published private(set) var currentGroupIndex: Int? = nil
+    /// 待删除原视频（仅含「压缩成功且已确认保存到 Photos」的原视频标识）。
+    @Published private(set) var pendingDeleteIDs: [String] = []
+    /// 已成功删除的原视频标识。
+    @Published private(set) var deletedOriginalIDs: [String] = []
 
     var isRunning: Bool { phase == .preparing || phase == .running }
     var cancelled: Bool { phase == .cancelled }

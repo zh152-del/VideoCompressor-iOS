@@ -84,7 +84,7 @@ final class PhotoScanner: ObservableObject {
             ))
         }
         videos = items
-        let processed = items.filter { $0.isProcessed }.count
         status = items.isEmpty ? .done(count: 0) : (auth == .limited ? .limited : .done(count: items.count))
-        AppLog.videoScan("Asset Count=\(items.count)，含 __VC__ 标记 \(processed) 个")
+        AppLog.videoScan("Asset Count=\(items.count)")
     }
+}
