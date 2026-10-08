@@ -206,7 +206,8 @@ struct TranscodeEngine {
         /// 校验 PTS：invalid / 负值 / NaN 一律拒收。
         func validPTS(_ sample: CMSampleBuffer) -> Bool {
             let pts = CMSampleBufferGetPresentationTimeStamp(sample)
-            return pts.isNumeric && CMSampleBufferGetSeconds(sample) >= 0
+            let secs = CMTimeGetSeconds(pts)
+            return pts.isNumeric && secs.isFinite && secs >= 0
         }
 
         var encodingError: Error?
