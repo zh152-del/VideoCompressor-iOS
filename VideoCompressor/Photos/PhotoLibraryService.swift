@@ -108,6 +108,31 @@ final class PhotoLibraryService {
         }
     }
 
+    // MARK: - 原视频导出（PHAsset → 本地文件，供压缩链路使用）
+
+    /// 将相册视频资源导出为本地文件（流式写出到临时目录，不整段载入内存）。
+    func exportVideo(from asset: PHAsset) async throws -> URL {
+        let resources = PHAssetResource.assetResources(for: asset)
+        guard let resource = resources.first(where: { $0.type == .video }) ?? resources.first else {
+            throw AppError.noVideoTrack
+        }
+        let ext = (resource.originalFilename as NSString).pathExtension
+        let url = TempFileManager.shared.newOutputURL(ext: ext.isEmpty ? "mov" : ext)
+        return try await withCheckedThrowingContinuation { cont in
+            let opts = PHAssetResourceRequestOptions()
+            opts.isNetworkAccessAllowed = false
+            PHAssetResourceManager.default().writeData(for: resource, toFile: url, options: opts) { error in
+                Task { @MainActor in
+                    if error != nil {
+                        cont.resume(throwing: AppError.videoReadFailed)
+                    } else {
+                        cont.resume(returning: url)
+                    }
+                }
+            }
+        }
+    }
+
     // MARK: - 删除原视频（仅此处申请 readWrite）
 
     /// 批量删除原始资源（一次性 performChanges，系统只弹一次确认）。
