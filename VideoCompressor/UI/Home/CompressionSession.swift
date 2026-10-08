@@ -251,8 +251,7 @@ final class CompressionSession: ObservableObject {
                                                  originalBytes: r.effectiveOriginalBytes,
                                                  compressedBytes: r.outputSizeBytes,
                                                  outcome: "saved", removed: false,
-                                                 savedAssetID: r.savedPhotoLocalIdentifier,
-                                                 fingerprintHex: nil)
+                                                 savedAssetID: r.savedPhotoLocalIdentifier)
                     case .failure:
                         return GroupItemSnapshot(assetID: pid, filename: t.item.title,
                                                  originalBytes: t.item.fileSizeBytes,
