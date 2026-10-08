@@ -1,43 +1,38 @@
 import SwiftUI
 
-/// 压缩方式选择页（独立页面）：模式 + 自定义高级参数。
-/// 文字排版驱动，无卡片堆叠。
+/// 压缩方式选择页（独立 push 页面）。
+///
+/// 导航关键修复：使用【系统导航栏 + 系统返回按钮】。
+/// 之前隐藏导航栏 + 自定义返回按钮 + dismiss() 的组合在 push 场景下
+/// 会破坏边缘侧滑并导致无法返回。不混用导航状态。
+///
+/// 选中态：当前模式整行有明确的浅蓝圆角选框 + 勾选图标，一眼可见。
 struct CompressionSettingsPage: View {
-    @Binding var profile: CompressionProfile
+    @EnvironmentObject var appState: AppState
     @Environment(\.dismiss) private var dismiss
+
+    private var profile: Binding<CompressionProfile> {
+        Binding(
+            get: { appState.profile },
+            set: { appState.profile = $0 }
+        )
+    }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 modeSection
-                if profile.mode == .custom {
+                if appState.profile.mode == .custom {
                     customSection
                 }
             }
             .padding(20)
         }
         .scrollIndicators(.hidden)
-        .toolbar(.hidden, for: .navigationBar)
-        .background(Color(.systemBackground))
-        .safeAreaInset(edge: .top) {
-            VStack(alignment: .leading, spacing: 4) {
-                HStack {
-                    Button { dismiss() } label: {
-                        Image(systemName: "chevron.left")
-                            .font(.body.weight(.semibold))
-                    }
-                    .buttonStyle(.plain)
-                    Spacer()
-                }
-                Text("压缩方式")
-                    .font(.largeTitle.bold())
-                Text(profile.mode.hint)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 8)
-        }
+        .navigationBarTitleDisplayMode(.large)
+        .navigationTitle("压缩方式")
+        .onAppear { AppLog.ui("进入压缩方式页面") }
+        .onDisappear { AppLog.ui("返回压缩页面（当前模式：\(appState.profile.mode.displayName)）") }
     }
 
     // MARK: - 模式
@@ -47,32 +42,40 @@ struct CompressionSettingsPage: View {
             Text("压缩模式")
                 .font(.headline)
             ForEach(CompressionMode.allCases) { mode in
+                let isSelected = (appState.profile.mode == mode)
                 Button {
-                    profile.mode = mode
+                    appState.profile.mode = mode
+                    AppLog.ui("选择压缩模式：\(mode.displayName)")
                 } label: {
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(mode.displayName)
-                                .font(.subheadline.weight(.medium))
+                                .font(.subheadline.weight(isSelected ? .semibold : .regular))
                                 .foregroundStyle(.primary)
                             Text(mode.hint)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
                         Spacer()
-                        if profile.mode == mode {
-                            Image(systemName: "checkmark")
-                                .font(.subheadline.weight(.semibold))
+                        if isSelected {
+                            Image(systemName: "checkmark.circle.fill")
                                 .foregroundStyle(Color.accentColor)
                         }
                     }
+                    .padding(.horizontal, 12)
                     .padding(.vertical, 10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(isSelected ? Color.accentColor.opacity(0.12) : Color.clear)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .strokeBorder(isSelected ? Color.accentColor.opacity(0.5) : Color.clear,
+                                          lineWidth: 1)
+                    )
                     .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
-                if mode != CompressionMode.allCases.last {
-                    Divider()
-                }
+                .buttonStyle(PressableButtonStyle())
             }
         }
     }
@@ -84,7 +87,7 @@ struct CompressionSettingsPage: View {
             Text("自定义参数")
                 .font(.headline)
 
-            Picker("目标分辨率", selection: $profile.custom.resolution) {
+            Picker("目标分辨率", selection: profile.resolution) {
                 ForEach(PresetResolution.allCases) { r in
                     Text(r.displayName).tag(r)
                 }
@@ -95,21 +98,21 @@ struct CompressionSettingsPage: View {
             HStack {
                 Text("帧率").font(.subheadline)
                 Spacer()
-                Text(profile.custom.fps == 0 ? "沿用源帧率" : "\(Int(profile.custom.fps)) fps")
+                Text(appState.profile.custom.fps == 0 ? "沿用源帧率" : "\(Int(appState.profile.custom.fps)) fps")
                     .font(.subheadline).foregroundStyle(.secondary)
                     .frame(width: 110, alignment: .trailing)
             }
-            Slider(value: $profile.custom.fps, in: 0...60, step: 1)
+            Slider(value: profile.custom.fps, in: 0...60, step: 1)
 
             HStack {
                 Text("画质").font(.subheadline)
                 Spacer()
-                Text("\(Int(profile.custom.quality * 100))%")
+                Text("\(Int(appState.profile.custom.quality * 100))%")
                     .font(.subheadline).foregroundStyle(.secondary)
             }
-            Slider(value: $profile.custom.quality, in: 0.1...1.0, step: 0.05)
+            Slider(value: profile.custom.quality, in: 0.1...1.0, step: 0.05)
 
-            Picker("编码格式", selection: $profile.custom.codec) {
+            Picker("编码格式", selection: profile.custom.codec) {
                 ForEach(VideoCodec.allCases) { c in
                     Text(c.displayName).tag(c)
                 }
@@ -117,18 +120,18 @@ struct CompressionSettingsPage: View {
             .pickerStyle(.segmented)
 
             Toggle(isOn: Binding(
-                get: { profile.custom.targetSizeMB != nil },
-                set: { on in profile.custom.targetSizeMB = on ? 50 : nil }
+                get: { appState.profile.custom.targetSizeMB != nil },
+                set: { on in appState.profile.custom.targetSizeMB = on ? 50 : nil }
             )) {
                 Text("限制目标文件大小").font(.subheadline)
             }
-            if profile.custom.targetSizeMB != nil {
+            if appState.profile.custom.targetSizeMB != nil {
                 HStack {
                     Slider(value: Binding(
-                        get: { profile.custom.targetSizeMB ?? 50 },
-                        set: { profile.custom.targetSizeMB = $0 }
+                        get: { appState.profile.custom.targetSizeMB ?? 50 },
+                        set: { appState.profile.custom.targetSizeMB = $0 }
                     ), in: 5...2000, step: 5)
-                    Text("\(Int(profile.custom.targetSizeMB ?? 50)) MB")
+                    Text("\(Int(appState.profile.custom.targetSizeMB ?? 50)) MB")
                         .font(.caption).foregroundStyle(.secondary)
                         .frame(width: 64, alignment: .trailing)
                 }

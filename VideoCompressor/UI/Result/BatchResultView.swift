@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// 批量结果列表（从完成总结点「查看结果」进入），点击行进入单条详情。
+/// 批量结果列表（从完成总结点「查看结果」push 进入），点击行进入单条详情。
+/// 使用系统导航栏 + 系统返回，保证返回手势与返回按钮始终可用。
 struct BatchResultView: View {
     let tasks: [CompressionTaskModel]
     var onContinue: (() -> Void)? = nil
@@ -10,37 +11,21 @@ struct BatchResultView: View {
             VStack(alignment: .leading, spacing: 0) {
                 ForEach(tasks) { task in
                     NavigationLink {
-                        if let r = task.status.result {
-                            ResultDetailPage(result: r, status: task.status)
-                        } else {
-                            failedDetail(task: task)
-                        }
+                        resultDetail(for: task)
                     } label: {
                         TaskResultRow(task: task)
                         if task.id != tasks.last?.id {
                             Divider().padding(.leading, 56)
                         }
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PressableButtonStyle())
                 }
             }
             .padding(.horizontal, 20)
         }
         .scrollIndicators(.hidden)
-        .toolbar(.hidden, for: .navigationBar)
-        .background(Color(.systemBackground))
-        .safeAreaInset(edge: .top) {
-            HStack {
-                Button { onContinue?() } label: {
-                    Image(systemName: "chevron.left").font(.body.weight(.semibold))
-                }
-                .buttonStyle(.plain)
-                Text("结果").font(.largeTitle.bold())
-                Spacer()
-            }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 8)
-        }
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationTitle("结果")
         .safeAreaInset(edge: .bottom) {
             if let onContinue {
                 Button { onContinue() } label: {
@@ -49,12 +34,21 @@ struct BatchResultView: View {
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 13)
+                        .background(Capsule().fill(Color.accentColor))
                 }
-                .buttonStyle(.plain)
-                .background(Capsule().fill(Color.accentColor))
+                .buttonStyle(PressableButtonStyle())
                 .padding(.horizontal, 24)
-                .padding(.bottom, 86)
+                .padding(.bottom, 8)
             }
+        }
+    }
+
+    @ViewBuilder
+    private func resultDetail(for task: CompressionTaskModel) -> some View {
+        if let r = task.status.result {
+            ResultDetailPage(result: r, status: task.status)
+        } else {
+            failedDetail(task: task)
         }
     }
 
@@ -71,6 +65,8 @@ struct BatchResultView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(30)
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationTitle("详情")
     }
 }
 
@@ -79,7 +75,6 @@ struct BatchResultView: View {
 struct ResultDetailPage: View {
     let result: CompressionResult
     let status: TaskStatus
-    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         ScrollView {
@@ -91,20 +86,8 @@ struct ResultDetailPage: View {
             .padding(20)
         }
         .scrollIndicators(.hidden)
-        .toolbar(.hidden, for: .navigationBar)
-        .background(Color(.systemBackground))
-        .safeAreaInset(edge: .top) {
-            HStack {
-                Button { dismiss() } label: {
-                    Image(systemName: "chevron.left").font(.body.weight(.semibold))
-                }
-                .buttonStyle(.plain)
-                Text(result.item.title).font(.largeTitle.bold()).lineLimit(1)
-                Spacer()
-            }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 8)
-        }
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationTitle(result.item.title)
     }
 
     @ViewBuilder
@@ -163,9 +146,8 @@ struct ResultDetailPage: View {
             InfoRow(title: "输出编码", value: result.outputCodec)
             InfoRow(title: "压缩模式", value: result.profile.modeDisplayName)
             InfoRow(title: "视频时长", value: Formatters.time(result.durationSeconds))
-            if let id = result.savedPhotoLocalIdentifier {
+            if result.savedPhotoLocalIdentifier != nil {
                 InfoRow(title: "已保存", value: "照片图库 ✓")
-                InfoRow(title: "资源标识", value: String(id.prefix(12)) + "…")
             }
         }
         .font(.subheadline)

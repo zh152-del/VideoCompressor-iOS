@@ -74,9 +74,9 @@ struct CompressionProgressView: View {
                     .foregroundStyle(.red)
                     .padding(.horizontal, 36)
                     .padding(.vertical, 12)
+                    .background(Capsule().fill(Color(.secondarySystemBackground)))
             }
-            .buttonStyle(.plain)
-            .background(.ultraThinMaterial, in: Capsule())
+            .buttonStyle(PressableButtonStyle())
             .padding(.bottom, 30)
         }
         .frame(maxWidth: .infinity)
@@ -139,7 +139,7 @@ struct CompressionProgressView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 13)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressableButtonStyle())
                 .background(Capsule().fill(Color.accentColor))
 
                 Button {
@@ -147,11 +147,12 @@ struct CompressionProgressView: View {
                 } label: {
                     Text("返回压缩")
                         .font(.body.weight(.medium))
+                        .foregroundStyle(Color.accentColor)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 13)
+                        .background(Capsule().fill(Color(.secondarySystemBackground)))
                 }
-                .buttonStyle(.plain)
-                .background(.ultraThinMaterial, in: Capsule())
+                .buttonStyle(PressableButtonStyle())
             }
             .padding(.horizontal, 24)
             .padding(.bottom, 30)
@@ -191,11 +192,12 @@ struct CompressionProgressView: View {
             } label: {
                 Text("返回压缩")
                     .font(.body.weight(.medium))
+                    .foregroundStyle(Color.accentColor)
                     .padding(.horizontal, 32)
                     .padding(.vertical, 12)
+                    .background(Capsule().fill(Color(.secondarySystemBackground)))
             }
-            .buttonStyle(.plain)
-            .background(.ultraThinMaterial, in: Capsule())
+            .buttonStyle(PressableButtonStyle())
             .padding(.top, 16)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

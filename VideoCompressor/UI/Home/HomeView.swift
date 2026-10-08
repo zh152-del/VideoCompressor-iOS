@@ -1,64 +1,77 @@
 import SwiftUI
 
-/// 主页「压缩」：顶部大标题 + 简洁空状态 / 已选视频列表 + 压缩方式 + 底部悬浮玻璃操作区。
+/// 主页「压缩」。
+///
+/// 交互状态机（由 AppState / CompressionSession 驱动，不再用散落的 Boolean）：
+///   idle（无已选视频）→ ready（已选）→ compressing（session.isRunning）→ completed/failed
+/// 「开始压缩」按钮在 idle 时 disabled、压缩中显示「正在压缩…」，绝无「点了没反应」。
+///
+/// Presentation 修饰符分层挂载（关键修复）：
+/// SwiftUI 中同一视图叠加多个 present 修饰符（sheet/fullScreenCover/alert）时
+/// 只有部分会生效。现拆分为：sheet→ScrollView、fullScreenCover+导航→NavigationStack、
+/// alert→header 视图，各自独立节点。
 struct HomeView: View {
+    @EnvironmentObject var appState: AppState
     @EnvironmentObject var temp: TempFileManager
     @EnvironmentObject var settings: SettingsStore
-    @StateObject private var session = CompressionSession()
-    @State private var selected: [VideoItem] = []
-    @State private var profile = CompressionProfile()
     @State private var showPicker = false
-    @State private var showProgress = false
     @State private var showSettingsPage = false
     @State private var error: AppError?
+
+    private var selected: [VideoItem] { appState.selectedVideos }
+    private var profile: CompressionProfile { appState.profile }
+    private var session: CompressionSession { appState.session }
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     header
+                        .alert(error?.errorDescription ?? "", isPresented: Binding(
+                            get: { error != nil },
+                            set: { if !$0 { error = nil } }
+                        )) {
+                            Button("好", role: .cancel) {}
+                        } message: {
+                            if let e = error { Text(e.recoverySuggestion) }
+                        }
                     mainContent
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 8)
-                .padding(.bottom, selected.isEmpty ? 40 : 140)
+                .padding(.bottom, selected.isEmpty ? 40 : 150)
             }
             .scrollIndicators(.hidden)
             .toolbar(.hidden, for: .navigationBar)
-            .safeAreaInset(edge: .bottom) {
-                // 底部悬浮玻璃操作区：仅已选视频时出现，避开底部玻璃导航
-                if !selected.isEmpty && !showProgress {
-                    bottomBar
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 86)
-                }
-            }
             .sheet(isPresented: $showPicker) {
                 VideoPicker(onPicked: { items in
-                    selected.append(contentsOf: items)
+                    appState.selectedVideos.append(contentsOf: items)
+                    AppLog.photo("选择视频 \(items.count) 个，累计 \(appState.selectedVideos.count) 个")
                 }, temp: temp)
             }
-            .fullScreenCover(isPresented: $showProgress) {
-                CompressionProgressView(session: session) {
-                    showProgress = false
-                    selected.removeAll()
-                }
-                .environmentObject(temp)
-                .environmentObject(settings)
-            }
-            .navigationDestination(isPresented: $showSettingsPage) {
-                CompressionSettingsPage(profile: $profile)
-            }
-            .alert(error?.errorDescription ?? "", isPresented: Binding(
-                get: { error != nil },
-                set: { if !$0 { error = nil } }
-            )) {
-                Button("好", role: .cancel) {}
-            } message: {
-                if let e = error { Text(e.recoverySuggestion) }
-            }
-            .onAppear { profile.mode = settings.defaultMode }
         }
+        // presentation 挂在 NavigationStack 层（与 ScrollView 层分开，避免同视图多 present 冲突）
+        .navigationDestination(isPresented: $showSettingsPage) {
+            CompressionSettingsPage()
+        }
+        .fullScreenCover(isPresented: $appState.showProgressCover) {
+            CompressionProgressView(session: session) {
+                // 用户明确结束本轮：清空已选并关闭进度页
+                appState.finishRound()
+            }
+            .environmentObject(temp)
+            .environmentObject(settings)
+        }
+        .overlay(alignment: .bottom) {
+            // 底部操作区：固定尺寸浮层，不产生全屏透明遮挡
+            if !selected.isEmpty && !appState.showProgressCover {
+                bottomBar
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 92)   // 稳定位于底部导航之上，不重叠
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .animation(.easeOut(duration: 0.2), value: selected.isEmpty)
     }
 
     // MARK: - 顶部大标题
@@ -70,6 +83,7 @@ struct HomeView: View {
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     // MARK: - 主体内容
@@ -83,7 +97,7 @@ struct HomeView: View {
         }
     }
 
-    /// 空状态：极简，仅文字 + 一个适中尺寸的胶囊按钮（不占满屏宽）。
+    /// 空状态：极简文字 + 适中胶囊按钮。
     private var emptyState: some View {
         VStack(spacing: 10) {
             Text("还没有视频")
@@ -93,6 +107,7 @@ struct HomeView: View {
                 .font(.subheadline)
                 .foregroundStyle(.tertiary)
             GlassCapsuleButton(title: "选择视频", systemImage: "plus") {
+                AppLog.ui("点击：选择视频")
                 showPicker = true
             }
             .padding(.top, 14)
@@ -101,7 +116,7 @@ struct HomeView: View {
         .padding(.top, 130)
     }
 
-    /// 已选视频列表（纵向滚动、轻分隔线、小圆角缩略图、右侧状态）。
+    /// 已选视频列表。
     private var selectedList: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text("已选择 \(selected.count) 个视频")
@@ -110,7 +125,7 @@ struct HomeView: View {
 
             ForEach(selected) { item in
                 VideoRow(item: item) {
-                    selected.removeAll { $0.id == item.id }
+                    appState.removeVideo(item)
                 }
                 if item.id != selected.last?.id {
                     Divider().padding(.leading, 64)
@@ -122,9 +137,12 @@ struct HomeView: View {
         }
     }
 
-    /// 压缩方式入口 + 预估结果。
+    /// 压缩方式入口 + 预估结果（明确标注为估算值）。
     private var compressionMethodRow: some View {
-        Button { showSettingsPage = true } label: {
+        Button {
+            AppLog.ui("进入压缩方式页面（当前模式：\(profile.mode.displayName)）")
+            showSettingsPage = true
+        } label: {
             HStack {
                 VStack(alignment: .leading, spacing: 3) {
                     Text("压缩方式").font(.subheadline)
@@ -144,10 +162,10 @@ struct HomeView: View {
             .padding(.vertical, 12)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressableButtonStyle())
     }
 
-    /// 预估文案：单个 → 「428 MB → 约 180 MB」；多个 → 「预计节省约 1.2 GB」。
+    /// 预估文案：明确是估算值；无法压缩的视频如实说明。
     private var estimateText: String {
         let estimates = selected.compactMap { item -> Int64? in
             BitrateCalculator.estimateOutputBytes(fileSizeBytes: item.fileSizeBytes,
@@ -155,17 +173,15 @@ struct HomeView: View {
                                                   height: item.height, fps: item.fps,
                                                   mode: profile.mode, custom: profile.custom)
         }
-        let originals = selected.map { $0.fileSizeBytes }
-        let totalOriginal = originals.reduce(Int64(0), +)
+        let totalOriginal = selected.reduce(Int64(0)) { $0 + $1.fileSizeBytes }
         let totalEstimate = estimates.reduce(Int64(0), +)
         let uncompressible = selected.count - estimates.count
 
-        if selected.count == 1, let est = estimates.first, let orig = originals.first {
-            return "\(Formatters.bytes(orig)) → 约 \(Formatters.bytes(est)) · 实际以编码后文件为准"
+        if selected.count == 1, let est = estimates.first, let orig = selected.first?.fileSizeBytes {
+            return "预计约 \(Formatters.bytes(est))（原 \(Formatters.bytes(orig))，以编码结果为准）"
         }
         if totalEstimate < totalOriginal {
-            let saved = totalOriginal - totalEstimate
-            var text = "预计节省约 \(Formatters.bytes(saved))"
+            var text = "预计节省约 \(Formatters.bytes(totalOriginal - totalEstimate))（估算值）"
             if uncompressible > 0 {
                 text += " · \(uncompressible) 个可能无法压缩"
             }
@@ -174,10 +190,11 @@ struct HomeView: View {
         return "所选视频码率已较低，可能无法再压缩"
     }
 
-    // MARK: - 底部悬浮操作区（玻璃）
+    // MARK: - 底部操作区（真实状态：idle disabled / 压缩中文案联动）
 
     private var bottomBar: some View {
-        VStack(spacing: 12) {
+        let busy = session.isRunning
+        return VStack(spacing: 12) {
             HStack {
                 Text("\(selected.count) 个视频")
                     .font(.subheadline.weight(.medium))
@@ -190,21 +207,32 @@ struct HomeView: View {
             Button {
                 startCompression()
             } label: {
-                Text("开始压缩")
+                Text(busy ? "正在压缩…" : "开始压缩")
                     .font(.body.weight(.semibold))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 13)
+                    .background(Capsule().fill(busy ? Color.accentColor.opacity(0.5) : Color.accentColor))
+                    .foregroundStyle(.white)
             }
-            .buttonStyle(.plain)
-            .foregroundStyle(.white)
-            .background(Capsule().fill(Color.accentColor))
+            .buttonStyle(PressableButtonStyle())
+            .disabled(busy)
         }
         .padding(16)
-        .glassPanel(cornerRadius: 22)
+        .floatSurface(cornerRadius: 22)
     }
 
     private func startCompression() {
-        session.run(items: selected, profile: profile, settings: settings)
-        showProgress = true
+        guard !selected.isEmpty else {
+            error = .unknown("尚未选择视频")
+            return
+        }
+        guard !session.isRunning else { return }
+        AppLog.ui("点击：开始压缩（\(selected.count) 个视频，模式：\(profile.mode.displayName)）")
+        session.run(items: selected, profile: profile, settings: settings) { startError in
+            // 启动失败必须可见，绝不静默
+            Task { @MainActor in error = startError }
+        }
+        // 只要 run 正常受理就弹出进度页（run 内部失败会通过 session.error / 回调展示）
+        appState.showProgressCover = true
     }
 }
