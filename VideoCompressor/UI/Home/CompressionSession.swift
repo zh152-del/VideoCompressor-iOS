@@ -243,7 +243,7 @@ final class CompressionSession: ObservableObject {
 
             // ---- 组记录快照（成功/失败/跳过逐个记录，供"已完成组"页面）----
             if let gi = currentGroupIndex {
-                let snaps: [GroupItemSnapshot] = tasks.compactMap { t in
+                let snaps: [GroupItemSnapshot] = tasks.compactMap { t -> GroupItemSnapshot? in
                     guard let pid = t.item.phAssetID ?? t.item.localIdentifier else { return nil }
                     switch t.status {
                     case .success(let r):
