@@ -246,19 +246,16 @@ struct HomeView: View {
             error = .unknown("请先选择视频")
             return
         }
-        // 本阶段先保证单视频全流程稳定，批量（串行）在功能验证后恢复
-        guard selected.count == 1 else {
-            error = .unknown("当前版本先支持单个视频压缩，请只保留 1 个视频")
-            return
-        }
-        let item = selected[0]
-        guard item.fileSizeBytes > 0, item.durationSeconds > 0.2 else {
-            error = .videoReadFailed
-            return
-        }
-        guard FileManager.default.fileExists(atPath: item.sourceURL.path) else {
-            error = .videoReadFailed
-            return
+        // 逐个校验每个视频的有效性（批量串行压缩，逐个处理互不影响）
+        for item in selected {
+            guard item.fileSizeBytes > 0, item.durationSeconds > 0.2 else {
+                error = .videoReadFailed
+                return
+            }
+            guard FileManager.default.fileExists(atPath: item.sourceURL.path) else {
+                error = .videoReadFailed
+                return
+            }
         }
         guard session.phase == .idle || session.phase == .completed || session.phase == .cancelled else {
             error = .unknown("已有压缩任务在进行中")

@@ -117,8 +117,30 @@ struct CompressionProgressView: View {
                 if session.failureCount > 0 {
                     countRow(text: "失败 \(session.failureCount) 个（原视频已保留）", color: .red)
                 }
+                if !session.deletedOriginalIDs.isEmpty {
+                    countRow(text: "原视频已删除 \(session.deletedOriginalIDs.count) 个", color: .secondary)
+                }
             }
             .padding(.top, 22)
+
+            // 手动批量删除 / 重试删除：一次性删除全部「已成功保存到 Photos」的原视频
+            if !session.pendingDeleteIDs.isEmpty {
+                Button {
+                    Task { await session.deletePendingOriginals() }
+                } label: {
+                    Text("删除原视频（\(session.pendingDeleteIDs.count)）")
+                        .font(.body.weight(.medium))
+                        .foregroundStyle(.red)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(Color(.secondarySystemBackground),
+                                    in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(PressableButtonStyle())
+                .padding(.horizontal, 24)
+                .padding(.top, 14)
+            }
 
             if session.successCount > 0 {
                 VStack(spacing: 10) {

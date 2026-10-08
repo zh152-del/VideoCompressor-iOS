@@ -75,7 +75,13 @@ final class PhotoLibraryService {
                 // 通过主线程 Task 回到主线程后再 resume，避免跨线程/执行器问题
                 Task { @MainActor in
                     if success, let id = placeholderID, !id.isEmpty {
-                        cont.resume(returning: id)
+                        // 【保存确认】重新 fetch 对应 PHAsset，确认资源真实存在于图库
+                        let fetched = PHAsset.fetchAssets(withLocalIdentifiers: [id], options: nil)
+                        if fetched.count > 0 {
+                            cont.resume(returning: id)
+                        } else {
+                            cont.resume(throwing: AppError.saveToPhotoFailed("保存已提交但在图库中未找到对应资源"))
+                        }
                     } else if let error = error {
                         cont.resume(throwing: AppError.saveToPhotoFailed(error.localizedDescription))
                     } else if placeholderID == nil {
@@ -90,6 +96,46 @@ final class PhotoLibraryService {
     }
 
     // MARK: - 删除原视频（仅此处申请 readWrite）
+
+    /// 批量删除原始资源（一次性 performChanges，系统只弹一次确认）。
+    /// - Parameters:
+    ///   - identifiers: 仅允许传入「对应压缩视频已成功保存到 Photos」的原视频标识。
+    /// - Returns: 删除失败的标识数组（如系统确认被拒/部分失败），调用方保留状态供重试。
+    func deleteOriginals(localIdentifiers: [String]) async -> (deleted: [String], failed: [String]) {
+        // 过滤无效标识 + 只删除图库中真实存在的资源
+        let valid = localIdentifiers.filter { !$0.isEmpty }
+        guard !valid.isEmpty else { return ([], []) }
+
+        // 删除需要 readWrite 权限；权限不足直接整体失败，不假装成功
+        var status = readWriteStatus()
+        if status == .notDetermined {
+            status = await PHPhotoLibrary.requestAuthorization(for: .readWrite)
+        }
+        guard status == .authorized || status == .limited else {
+            return ([], valid)   // 全部标记失败，保留待删除状态
+        }
+        let assets = PHAsset.fetchAssets(withLocalIdentifiers: valid, options: nil)
+        guard assets.count > 0 else { return (valid, []) } // 原片已不在图库，视为已删除
+
+        let targetIDs: [String] = (0..<assets.count).compactMap { assets.object(at: $0).localIdentifier }
+
+        let result: (deleted: [String], failed: [String]) = await withCheckedContinuation { cont in
+            PHPhotoLibrary.shared().performChanges({
+                PHAssetChangeRequest.deleteAssets(assets)
+            }) { success, error in
+                Task { @MainActor in
+                    if success {
+                        AppLog.delete("批量删除成功：\(targetIDs.count) 个原视频")
+                        cont.resume(returning: (targetIDs, []))
+                    } else {
+                        AppLog.delete("批量删除失败：\(error?.localizedDescription ?? "未知")")
+                        cont.resume(returning: ([], targetIDs))
+                    }
+                }
+            }
+        }
+        return result
+    }
 
     /// 仅在「保存成功」后调用：删除原始资源。
     /// 需要 readWrite 权限；空标识或无该资源时安全跳过（不报错、不崩溃）。

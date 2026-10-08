@@ -35,6 +35,11 @@ final class CompressionSession: ObservableObject {
     @Published var phase: Phase = .idle
     @Published var overallProgress: Double = 0
     @Published var error: AppError?
+    /// 待删除原视频（仅包含「压缩成功且已确认保存到 Photos」的原视频标识）。
+    /// 手动模式：用户在完成页一键删除；自动模式：批次结束后统一删除。
+    @Published private(set) var pendingDeleteIDs: [String] = []
+    /// 已成功删除的原视频标识。
+    @Published private(set) var deletedOriginalIDs: [String] = []
 
     /// 兼容读取：是否正在执行任务。
     var isRunning: Bool { phase == .preparing || phase == .running }
@@ -98,6 +103,8 @@ final class CompressionSession: ObservableObject {
         phase = .preparing
         overallProgress = 0
         error = nil
+        pendingDeleteIDs = []
+        deletedOriginalIDs = []
         tasks = items.map { CompressionTaskModel(item: $0, profile: profile) }
         service.resetCancellation()
         AppLog.compress("Run started：\(items.count) 个视频，模式：\(profile.mode.displayName)")
@@ -155,17 +162,9 @@ final class CompressionSession: ObservableObject {
                         tasks[idx].status = .success(final)
                         self.writeHistory(final.historyEntry(savedID: savedID, outcome: "saved"))
 
-                        // ---- 保存成功后才删除原视频 ----
-                        if settings.deleteOriginalAfterSave, let orig = items[idx].localIdentifier {
-                            do {
-                                AppLog.delete("Delete started：\(items[idx].title)")
-                                try await PhotoLibraryService.shared.deleteOriginal(localIdentifier: orig)
-                                AppLog.delete("Delete succeeded：\(items[idx].title)")
-                            } catch {
-                                // 删除失败不回滚保存状态：原视频仍在图库，用户可手动删
-                                AppLog.delete("Delete failed（原视频保留）：\(error.localizedDescription)")
-                                self.error = (error as? AppError) ?? .deleteOriginalFailed(error.localizedDescription)
-                            }
+                        // ---- 保存成功 → 原视频进入待删除队列（统一批量删除，绝不逐个删）----
+                        if let orig = items[idx].localIdentifier, !orig.isEmpty {
+                            pendingDeleteIDs.append(orig)
                         }
                     } catch {
                         AppLog.photo("Save failed（原视频保留）：\(error.localizedDescription)")
@@ -191,12 +190,32 @@ final class CompressionSession: ObservableObject {
             }
 
             overallProgress = 1.0
+            // 自动删除模式：批次结束后一次性批量删除（只含保存成功的原视频）
+            if settings.deleteOriginalAfterSave, !pendingDeleteIDs.isEmpty {
+                await deletePendingOriginals()
+            }
             phase = service.isCancelledFlag ? .cancelled : .completed
             if bgTaskID != .invalid {
                 UIApplication.shared.endBackgroundTask(bgTaskID)
                 bgTaskID = .invalid
             }
             AppLog.compress("Run finished：成功 \(successCount) / noGain \(noGainCount) / 失败 \(failureCount)，节省 \(Formatters.bytes(savedBytesSoFar))")
+        }
+    }
+
+    /// 一次性批量删除待删除原视频（只允许删除「已确认保存到 Photos」的原视频）。
+    /// 删除失败的原视频保留在 pendingDeleteIDs 中，用户可再次点击重试。
+    func deletePendingOriginals() async {
+        guard !pendingDeleteIDs.isEmpty, !isRunning else { return }
+        AppLog.delete("Delete started：批量删除 \(pendingDeleteIDs.count) 个原视频")
+        let result = await PhotoLibraryService.shared.deleteOriginals(localIdentifiers: pendingDeleteIDs)
+        if !result.deleted.isEmpty {
+            deletedOriginalIDs.append(contentsOf: result.deleted)
+            pendingDeleteIDs.removeAll { result.deleted.contains($0) }
+        }
+        if !result.failed.isEmpty {
+            AppLog.delete("Delete failed：\(result.failed.count) 个原视频未删除（保留待重试）")
+            self.error = .deleteOriginalFailed("\(result.failed.count) 个原视频删除失败，已保留，可重试")
         }
     }
 

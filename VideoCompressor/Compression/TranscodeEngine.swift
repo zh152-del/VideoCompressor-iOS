@@ -65,19 +65,37 @@ struct TranscodeEngine {
             throw AppError.videoReadFailed
         }
 
-        // MARK: - 目标尺寸（绝不放大；奇数尺寸向上取偶）
+        // MARK: - 目标尺寸（保比例、绝不放大、奇数向上取偶）
+        //
+        // 【关键概念】编码尺寸必须匹配【像素数据排列】(naturalSize)，而不是显示尺寸：
+        // 竖屏 iPhone 视频 naturalSize=1920×1080（像素横向），preferredTransform=90° → 显示 1080×1920。
+        // 正确流程：按【显示尺寸】算出目标显示宽高（保持比例），若 transform 为 90°/270°（宽高互换），
+        // 则编码宽高 = 目标显示宽高【互换】回像素排列；再用 videoInput.transform 让播放器旋转显示。
+        // 此前直接用显示尺寸做 AVVideoWidth/Height → 编码器把横向像素流按竖向尺寸编码 → 画面压扁。
 
+        let naturalW = max(1, Int(naturalSize.width))
+        let naturalH = max(1, Int(naturalSize.height))
         let srcH = max(1, Int(display.height))
         let srcW = max(1, Int(display.width))
-        guard srcH > 0, srcW > 0, display.width.isFinite, display.height.isFinite else {
-            AppLog.compress("[ERROR] 视频尺寸无效：\(display)")
+        guard srcH > 0, srcW > 0, display.width.isFinite, display.height.isFinite,
+              naturalW > 0, naturalH > 0, naturalSize.width.isFinite, naturalSize.height.isFinite else {
+            AppLog.compress("[ERROR] 视频尺寸无效：display=\(display) natural=\(naturalSize)")
             throw AppError.videoReadFailed
         }
-        let targetH = options.maxHeight.map { min($0, srcH) } ?? srcH
-        let scale = Double(targetH) / Double(srcH)
-        let targetW = options.maxHeight == nil ? srcW : max(2, Int(Double(srcW) * scale))
-        let outW = Self.makeEven(max(2, targetW))
-        let outH = Self.makeEven(max(2, targetH))
+        // 显示方向是否与像素排列互换（90°/270° 旋转）
+        let angle = atan2(transform.b, transform.a) * 180 / .pi
+        let isRotated = abs(abs(angle) - 90) < 0.5
+
+        // 目标【显示】高度（按模式上限，不放大）
+        let targetDisplayH = options.maxHeight.map { min($0, srcH) } ?? srcH
+        let targetDisplayW = max(2, Int((Double(srcW) * Double(targetDisplayH) / Double(srcH)).rounded()))
+
+        // 编码尺寸 = 像素排列方向；rotated 时与显示宽高互换
+        let encW = isRotated ? targetDisplayH : targetDisplayW
+        let encH = isRotated ? targetDisplayW : targetDisplayH
+        let outW = Self.makeEven(max(2, encW))
+        let outH = Self.makeEven(max(2, encH))
+        AppLog.compress("尺寸：natural=\(naturalW)×\(naturalH)，display=\(srcW)×\(srcH)，rotated=\(isRotated)，编码=\(outW)×\(outH)")
 
         // MARK: - 码率（下限保护，禁止 0/负数进入编码器）
 
@@ -294,10 +312,31 @@ struct TranscodeEngine {
             throw AppError.outputFileEmpty
         }
         let outAsset = AVAsset(url: outputURL)
-        guard (try? await outAsset.loadTracks(withMediaType: .video))?.first != nil else {
+        guard let outTrack = (try? await outAsset.loadTracks(withMediaType: .video))?.first else {
             try? FileManager.default.removeItem(at: outputURL)
             AppLog.compress("[ERROR] 输出文件无法读取视频轨道（损坏）")
             throw AppError.outputFileEmpty
+        }
+
+        // 【比例验证】输出显示比例必须与源显示比例一致（浮点误差 <2%），否则判定失败、不保存
+        do {
+            let outNatural = try await outTrack.load(.naturalSize)
+            let outTransform = try await outTrack.load(.preferredTransform)
+            let outDisplay = VideoGeometry.displaySize(after: outTransform, natural: outNatural)
+            let inRatio = Double(srcW) / Double(srcH)
+            let outRatio = outDisplay.width / max(1, outDisplay.height)
+            let deviation = abs(outRatio - inRatio) / inRatio
+            AppLog.compress("比例验证：输入=\(srcW)×\(srcH)(\(String(format: "%.3f", inRatio)))，输出=\(Int(outDisplay.width))×\(Int(outDisplay.height))(\(String(format: "%.3f", outRatio)))，偏差=\(String(format: "%.2f%%", deviation * 100))")
+            if deviation > 0.02 {
+                try? FileManager.default.removeItem(at: outputURL)
+                AppLog.compress("[ERROR] 输出比例严重偏差，判定失败")
+                throw AppError.compressionFailed("输出画面比例与原始视频不一致，已放弃保存")
+            }
+        } catch let e as AppError {
+            throw e
+        } catch {
+            // 比例读取失败不阻断（个别容器元数据缺失），仅记录
+            AppLog.compress("输出比例读取失败（不阻断）：\(error.localizedDescription)")
         }
         AppLog.compress("Encoding complete：输出 \(Formatters.bytes(outSize))")
     }
