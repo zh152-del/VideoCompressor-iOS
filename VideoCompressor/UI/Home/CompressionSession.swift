@@ -27,14 +27,21 @@ final class CompressionSession: ObservableObject {
         case idle        // 无任务
         case preparing   // 已受理，正在准备
         case running     // 正在逐个压缩/保存
+        case recording   // 正在记录压缩状态（验证成品 __VC__ 标记，真实进度）
         case completed   // 全部结束（含部分失败）
         case cancelled   // 用户取消
     }
+
+    struct MarkProgress: Equatable { let done: Int; let total: Int }
 
     @Published var tasks: [CompressionTaskModel] = []
     @Published var phase: Phase = .idle
     @Published var overallProgress: Double = 0
     @Published var error: AppError?
+    @Published var markProgress: MarkProgress? = nil            // 标记验证进度（x / N）
+    @Published var markFailedTitles: [String] = []              // 标记验证失败的视频名
+    /// 当前压缩的组号（0-based；非分组压缩为 nil）。
+    @Published private(set) var currentGroupIndex: Int? = nil
     /// 待删除原视频（仅包含「压缩成功且已确认保存到 Photos」的原视频标识）。
     /// 手动模式：用户在完成页一键删除；自动模式：批次结束后统一删除。
     @Published private(set) var pendingDeleteIDs: [String] = []
@@ -42,7 +49,7 @@ final class CompressionSession: ObservableObject {
     @Published private(set) var deletedOriginalIDs: [String] = []
 
     /// 兼容读取：是否正在执行任务。
-    var isRunning: Bool { phase == .preparing || phase == .running }
+    var isRunning: Bool { phase == .preparing || phase == .running || phase == .recording }
     var cancelled: Bool { phase == .cancelled }
 
     private let service = CompressionService()
@@ -83,6 +90,7 @@ final class CompressionSession: ObservableObject {
     /// 启动被拒（无视频 / 正在运行 / 源文件已失效）时通过 `onStartError` 回调报告，绝不静默。
     func run(items: [VideoItem], profile: CompressionProfile,
              settings: SettingsStore,
+             groupIndex: Int? = nil, skippedCount: Int = 0,
              onStartError: ((AppError) -> Void)? = nil) {
         guard !items.isEmpty else {
             onStartError?(.unknown("尚未选择视频"))
@@ -105,6 +113,9 @@ final class CompressionSession: ObservableObject {
         error = nil
         pendingDeleteIDs = []
         deletedOriginalIDs = []
+        markProgress = nil
+        markFailedTitles = []
+        currentGroupIndex = groupIndex
         tasks = items.map { CompressionTaskModel(item: $0, profile: profile) }
         service.resetCancellation()
         AppLog.compress("Run started：\(items.count) 个视频，模式：\(profile.mode.displayName)")
@@ -197,6 +208,50 @@ final class CompressionSession: ObservableObject {
             if settings.deleteOriginalAfterSave, !pendingDeleteIDs.isEmpty {
                 await deletePendingOriginals()
             }
+
+            // ---- 记录压缩状态（__VC__ 标记验证，真实进度逐个确认）----
+            // 标记本身在保存时已写入成品文件名（originalFilename），这里逐个重读验证。
+            if groupIndex != nil {
+                phase = .recording
+                let successes = tasks.compactMap { t -> CompressionResult? in
+                    if case .success(let r) = t.status { return r } else { return nil }
+                }
+                var done = 0
+                var failedMarks: [String] = []
+                markProgress = MarkProgress(done: 0, total: successes.count)
+                for r in successes {
+                    let ok = await Self.verifyMark(savedID: r.savedPhotoLocalIdentifier)
+                    done += 1
+                    if !ok { failedMarks.append(r.item.title) }
+                    markProgress = MarkProgress(done: done, total: successes.count)
+                }
+                markFailedTitles = failedMarks
+                AppLog.mark("标记验证完成：\(successes.count - failedMarks.count)/\(successes.count)")
+
+                // 写入组记录（失败/跳过不打标已由流程保证；跳过数由调用方传入）
+                let snapshots: [GroupItemSnapshot] = tasks.compactMap { t in
+                    guard let pid = t.item.phAssetID ?? t.item.localIdentifier else { return nil }
+                    switch t.status {
+                    case .success(let r):
+                        return GroupItemSnapshot(assetID: pid, filename: t.item.title,
+                                                 originalBytes: t.item.fileSizeBytes,
+                                                 compressedBytes: r.outputSizeBytes,
+                                                 outcome: "saved", removed: false,
+                                                 savedAssetID: r.savedPhotoLocalIdentifier)
+                    case .failure:
+                        return GroupItemSnapshot(assetID: pid, filename: t.item.title,
+                                                 originalBytes: t.item.fileSizeBytes,
+                                                 compressedBytes: nil,
+                                                 outcome: "failed", removed: false, savedAssetID: nil)
+                    default: return nil
+                    }
+                }
+                GroupStore.shared.recordCompleted(index: groupIndex!, totalCount: items.count + skippedCount,
+                                                  succeeded: successes.count, failed: failureCount,
+                                                  skipped: skippedCount, markFailedCount: failedMarks.count,
+                                                  items: snapshots)
+            }
+
             phase = service.isCancelledFlag ? .cancelled : .completed
             if bgTaskID != .invalid {
                 UIApplication.shared.endBackgroundTask(bgTaskID)
@@ -223,6 +278,19 @@ final class CompressionSession: ObservableObject {
     }
 
     // MARK: - 私有
+
+    /// 验证成品 __VC__ 标记：重新读取 PHAsset 的 originalFilename 确认包含标记。
+    private static func verifyMark(savedID: String?) async -> Bool {
+        guard let id = savedID else { return false }
+        let fetch = PHAsset.fetchAssets(withLocalIdentifiers: [id], options: nil)
+        guard let asset = fetch.firstObject else { return false }
+        let name = PHAssetResource.assetResources(for: asset).first { $0.type == .video }?.originalFilename
+            ?? (asset.value(forKey: "filename") as? String) ?? ""
+        let ok = ProcessedMark.isProcessed(filename: name)
+        if !ok { AppLog.mark("[ERROR] 标记验证失败：成品文件名为 \(name)") }
+        return ok
+    }
+
 
     /// 历史写入（统一入口，带日志，真实结果）。
     private func writeHistory(_ entry: HistoryEntry) {

@@ -1,6 +1,7 @@
 import Foundation
 import AVFoundation
 import UIKit
+import Photos
 
 /// 压缩编排服务：协调读取、转码、进度上报、取消、临时文件与后台任务。
 ///
@@ -40,6 +41,22 @@ final class CompressionService {
                   progress: ((Double) -> Void)? = nil) async throws -> CompressionResult {
         let cancelled: () -> Bool = { [weak self] in self?.isCancelled ?? true }
 
+        // ---- 懒导出：PHAsset 来源的视频在真正压缩前才流式落盘（避免预导出占满磁盘）----
+        var effectiveURL = item.sourceURL
+        if item.needsLibraryExport, let pid = item.phAssetID {
+            guard let libAsset = PHAsset.fetchAssets(withLocalIdentifiers: [pid], options: nil).firstObject else {
+                AppLog.compress("[ERROR] 图库资源不存在：\(item.title)")
+                throw AppError.videoReadFailed
+            }
+            effectiveURL = try await PhotoLibraryService.shared.exportVideo(from: libAsset)
+            AppLog.compress("已从图库导出源文件：\(item.title)")
+        }
+        // 源文件真实大小：扫描阶段可能拿不到（API 限制），导出后从文件系统获得
+        let originalBytes: Int64 = {
+            if item.fileSizeBytes > 0 { return item.fileSizeBytes }
+            return (try? FileManager.default.attributesOfItem(atPath: effectiveURL.path)[.size] as? Int64) ?? 0
+        }()
+
         // ---- 前置判定：估算已无法有效压缩 → 跳过编码，直接 noGain ----
         let estimate = BitrateCalculator.estimateOutputBytes(
             fileSizeBytes: item.fileSizeBytes,
@@ -52,24 +69,24 @@ final class CompressionService {
         }
 
         // ---- 首次编码 ----
-        var (outputURL, outMeta, outSize) = try await encode(item: item, profile: profile,
+        var (outputURL, outMeta, outSize) = try await encode(item: item, sourceURL: effectiveURL, profile: profile,
                                                              preferredCodec: preferredCodec,
                                                              progress: progress, cancelled: cancelled)
 
         // ---- 校验：必须严格小于源文件，否则按规范重试一次更激进的参数 ----
-        if outSize >= item.fileSizeBytes && !cancelled() {
+        if outSize >= originalBytes && !cancelled() {
             TempFileManager.shared.remove(outputURL)
             // 仅在非「高压缩」模式重试一次（高压缩已是最低参数，重试无意义）
             if profile.mode != .high {
                 let retryProfile = CompressionProfile(mode: .high, custom: profile.custom)
-                (outputURL, outMeta, outSize) = try await encode(item: item, profile: retryProfile,
+                (outputURL, outMeta, outSize) = try await encode(item: item, sourceURL: effectiveURL, profile: retryProfile,
                                                                  preferredCodec: preferredCodec,
                                                                  progress: nil, cancelled: cancelled)
             }
         }
 
         // ---- 最终校验 ----
-        if outSize >= item.fileSizeBytes {
+        if outSize >= originalBytes {
             TempFileManager.shared.remove(outputURL)
             return Self.noGainResult(item: item, profile: profile, attemptedBytes: outSize)
         }
@@ -84,18 +101,19 @@ final class CompressionService {
             durationSeconds: item.durationSeconds,
             profile: profile,
             savedPhotoLocalIdentifier: nil,
-            noGain: false
+            noGain: false,
+            originalBytesOverride: originalBytes > 0 ? originalBytes : nil
         )
     }
 
     // MARK: - 私有：按 profile 执行一次编码
 
     /// - Returns: (输出URL, 输出元信息, 输出大小)
-    private func encode(item: VideoItem, profile: CompressionProfile,
+    private func encode(item: VideoItem, sourceURL: URL, profile: CompressionProfile,
                         preferredCodec: VideoCodec,
                         progress: ((Double) -> Void)?,
                         cancelled: @escaping () -> Bool) async throws -> (URL, VideoMeta?, Int64) {
-        let asset = AVAsset(url: item.sourceURL)
+        let asset = AVAsset(url: sourceURL)
         let outputURL = TempFileManager.shared.newOutputURL()
 
         do {

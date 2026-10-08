@@ -1,23 +1,33 @@
 import SwiftUI
 import Photos
 
-/// 主页「压缩」：自动扫描相册视频 + 规格展示 + 选择压缩 + 底部操作区。
+/// 主页「压缩」：自动扫描相册视频，每 50 个一组，组独立压缩。
 /// 已压缩识别：文件名含 __VC__（压缩成品保存时命名，重装 App 后仍可识别）。
 struct HomeView: View {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var temp: TempFileManager
     @EnvironmentObject var settings: SettingsStore
     @StateObject private var scanner = PhotoScanner()
+    @ObservedObject private var groupStore = GroupStore.shared
     @State private var showPicker = false
     @State private var showSettingsPage = false
     @State private var error: AppError?
-    @State private var exportingIDs: Set<String> = []
     @State private var askProcessedItems: [VideoItem]? = nil   // 询问模式待定项
+    @State private var pendingRun: [VideoItem]? = nil          // 询问模式待执行的完整队列
     @State private var skipNote: String? = nil
+    @State private var activeGroupIndex: Int? = nil            // 本次压缩的组号（手动勾选为 nil）
 
     private var selected: [VideoItem] { appState.selectedVideos }
     private var profile: CompressionProfile { appState.profile }
     private var session: CompressionSession { appState.session }
+
+    /// 每 50 个一组。
+    private let groupSize = 50
+    private var groupCount: Int { (scanner.videos.count + groupSize - 1) / groupSize }
+    private func groupVideos(_ gi: Int) -> [ScannedVideo] {
+        let s = gi * groupSize
+        return Array(scanner.videos.dropFirst(s).prefix(groupSize))
+    }
 
     var body: some View {
         NavigationStack {
@@ -34,6 +44,7 @@ struct HomeView: View {
                         }
                     permissionHint
                     pickerEntry
+                    completedGroupsEntry
                     mainContent
                     if !selected.isEmpty {
                         compressionMethodRow
@@ -51,9 +62,12 @@ struct HomeView: View {
                     AppLog.photo("选择视频 \(items.count) 个，累计 \(appState.selectedVideos.count) 个")
                 }, temp: temp)
             }
-            // 所有 present 修饰符都在 NavigationStack 内部（navigationDestination 在外层=非法结构会闪退）
+            // 所有 present 修饰符都在 NavigationStack 内部（外层=非法结构会闪退）
             .navigationDestination(isPresented: $showSettingsPage) {
                 CompressionSettingsPage()
+            }
+            .navigationDestination(isPresented: $showCompletedGroups) {
+                CompletedGroupsView()
             }
             .fullScreenCover(isPresented: $appState.showProgressCover) {
                 CompressionProgressView(session: session) {
@@ -63,17 +77,18 @@ struct HomeView: View {
                 .environmentObject(settings)
             }
             // 询问模式：一次确认整批已压缩视频
-            .confirmationDialog("有 \(askProcessedItems?.count ?? 0) 个视频已压缩过",
+            .confirmationDialog("有 \(pendingProcessedCount) 个视频已压缩过",
                                 isPresented: Binding(
-                                    get: { askProcessedItems != nil },
-                                    set: { if !$0 { askProcessedItems = nil } }
+                                    get: { pendingRun != nil },
+                                    set: { if !$0 { pendingRun = nil } }
                                 ), titleVisibility: .visible) {
                 Button("跳过这些视频") {
-                    let skip = Set(askProcessedItems?.map { $0.id } ?? [])
-                    launchRun(items: selected.filter { !skip.contains($0.id) })
+                    let skipIDs = Set(pendingRun?.filter { $0.title.contains(ProcessedMark.marker) }.map { $0.id } ?? [])
+                    let remaining = (pendingRun ?? []).filter { !skipIDs.contains($0.id) }
+                    launchRun(items: remaining, skippedCount: skipIDs.count)
                 }
                 Button("重新压缩", role: .destructive) {
-                    launchRun(items: selected)
+                    launchRun(items: pendingRun ?? [], skippedCount: 0)
                 }
                 Button("取消", role: .cancel) {}
             } message: {
@@ -90,9 +105,14 @@ struct HomeView: View {
         }
         .animation(.easeOut(duration: 0.2), value: selected.isEmpty)
         .onAppear {
-            // 每次回到主页都重新扫描（轻量元数据），保证 __VC__ 标记/外部删除状态及时反映
+            // 每次回到主页重新扫描（元数据级），保证 __VC__ 标记 / 外部删除及时反映
             scanner.scan()
         }
+    }
+
+    @State private var showCompletedGroups = false
+    private var pendingProcessedCount: Int {
+        (pendingRun ?? []).filter { $0.title.contains(ProcessedMark.marker) }.count
     }
 
     // MARK: - 顶部
@@ -145,6 +165,30 @@ struct HomeView: View {
         }
     }
 
+    /// 已完成组入口（用户主动点击进入，绝不自动跳转）。
+    private var completedGroupsEntry: some View {
+        Group {
+            if !groupStore.records.isEmpty {
+                NavigationLink {
+                    CompletedGroupsView()
+                } label: {
+                    HStack {
+                        Label("已完成组（\(groupStore.records.count)）", systemImage: "checkmark.rectangle.stack")
+                            .font(.subheadline.weight(.medium))
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption.weight(.semibold)).foregroundStyle(.tertiary)
+                    }
+                    .padding(14)
+                    .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(PressableButtonStyle())
+                .foregroundStyle(.primary)
+            }
+        }
+    }
+
     // MARK: - 主体
 
     @ViewBuilder
@@ -162,20 +206,20 @@ struct HomeView: View {
         case .denied:
             EmptyView()
         case .limited:
-            scannedList
+            groupedList
         case .done:
             if scanner.videos.isEmpty {
                 VStack(spacing: 10) {
                     Text("相册中没有视频").font(.title3.weight(.medium)).foregroundStyle(.secondary)
                 }.frame(maxWidth: .infinity).padding(.top, 100)
             } else {
-                scannedList
+                groupedList
             }
         }
     }
 
-    /// 扫描列表：懒加载，封面按需获取（AssetThumbnail 内部 NSCache + 小图请求）。
-    private var scannedList: some View {
+    /// 分组列表：每 50 个一组，明显分隔 + 组头（状态 / 压缩按钮）。
+    private var groupedList: some View {
         LazyVStack(alignment: .leading, spacing: 0) {
             if case .limited = scanner.status {
                 Text("受限访问：仅显示你授权的照片视频")
@@ -185,15 +229,19 @@ struct HomeView: View {
             if !selected.isEmpty {
                 Text("已选 \(selected.count) 个视频").font(.headline).padding(.bottom, 8)
             }
-            ForEach(scanner.videos) { video in
-                ScanVideoRow(
-                    video: video,
-                    isSelected: selected.contains { $0.localIdentifier == video.id },
-                    isExporting: exportingIDs.contains(video.id),
-                    onToggle: { toggle(video) }
-                )
-                if video.id != scanner.videos.last?.id {
-                    Divider().padding(.leading, 64)
+            ForEach(0..<max(groupCount, 0), id: \.self) { gi in
+                groupHeader(gi)
+                ForEach(groupVideos(gi)) { video in
+                    ScanVideoRow(
+                        video: video,
+                        isSelected: selected.contains { $0.localIdentifier == video.id },
+                        onToggle: { toggle(video) }
+                    )
+                }
+                if gi < groupCount - 1 {
+                    // 明显组分隔线
+                    Rectangle().fill(Color(.separator).opacity(0.6)).frame(height: 1)
+                        .padding(.vertical, 14)
                 }
             }
             if let note = skipNote {
@@ -202,40 +250,70 @@ struct HomeView: View {
         }
     }
 
-    /// 勾选/取消一个扫描视频：勾选时先导出本地副本（流式，非整段载入内存），再进入压缩队列。
+    /// 组头：编号 / 范围 / 数量 / 状态 / 压缩按钮。
+    @ViewBuilder
+    private func groupHeader(_ gi: Int) -> some View {
+        let items = groupVideos(gi)
+        let record = groupStore.records.first { $0.index == gi }
+        let stateText: String = {
+            if session.isRunning, session.currentGroupIndex == gi {
+                return "压缩中 \(session.finishedCount) / \(session.tasks.count)"
+            }
+            if let r = record {
+                return "已完成 · 成功\(r.succeeded) 失败\(r.failed) 跳过\(r.skipped)"
+            }
+            return "未开始"
+        }()
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("第\(gi + 1)组").font(.headline)
+                Text("\(gi * groupSize + 1) - \(gi * groupSize + items.count)")
+                    .font(.caption).foregroundStyle(.secondary)
+                Spacer()
+                Text(stateText)
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(record != nil ? Color.green : (session.isRunning && session.currentGroupIndex == gi) ? Color.accentColor : Color.secondary)
+            }
+            Text("\(items.count) 个视频").font(.caption).foregroundStyle(.secondary)
+            Button {
+                startGroup(gi)
+            } label: {
+                Text(session.isRunning && session.currentGroupIndex == gi ? "压缩中…" : "压缩第\(gi + 1)组")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(Capsule().fill(session.isRunning ? Color.accentColor.opacity(0.4) : Color.accentColor))
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(PressableButtonStyle())
+            .disabled(session.isRunning)
+        }
+        .padding(.vertical, 10)
+    }
+
+    /// 勾选/取消一个扫描视频：直接以 PHAsset 引用加入队列（压缩前才流式导出，不占磁盘）。
     private func toggle(_ video: ScannedVideo) {
         if let idx = selected.firstIndex(where: { $0.localIdentifier == video.id }) {
             appState.selectedVideos.remove(at: idx)
             return
         }
-        guard !exportingIDs.contains(video.id) else { return }
-        exportingIDs.insert(video.id)
-        Task {
-            do {
-                let url = try await PhotoLibraryService.shared.exportVideo(from: video.asset)
-                let meta = try? await VideoInfoReader.readInfo(at: url)
-                let thumbURL = temp.newThumbnailURL()
-                try? await VideoInfoReader.generateThumbnail(from: url, to: thumbURL)
-                let item = VideoItem(
-                    localIdentifier: video.id,
-                    sourceURL: url,
-                    title: video.filename,
-                    durationSeconds: meta?.durationSeconds ?? video.duration,
-                    fileSizeBytes: meta?.fileSizeBytes ?? video.fileSizeBytes,
-                    width: meta?.width ?? video.pixelWidth,
-                    height: meta?.height ?? video.pixelHeight,
-                    fps: meta?.fps ?? 0,
-                    codecDescription: meta?.codecDescription ?? "未知",
-                    thumbnailURL: thumbURL,
-                    creationDate: nil
-                )
-                appState.selectedVideos.append(item)
-                AppLog.videoScan("已选择：\(video.filename)，\(Formatters.bytes(item.fileSizeBytes))")
-            } catch {
-                self.error = .videoReadFailed
-            }
-            exportingIDs.remove(video.id)
-        }
+        let item = VideoItem(
+            localIdentifier: video.id,
+            sourceURL: URL(fileURLWithPath: "/dev/null"),   // 占位：压缩前经 phAssetID 懒导出
+            title: video.filename,
+            durationSeconds: video.duration,
+            fileSizeBytes: video.fileSizeBytes ?? 0,
+            width: video.pixelWidth,
+            height: video.pixelHeight,
+            fps: 0,
+            codecDescription: "未知",
+            thumbnailURL: nil,
+            creationDate: nil,
+            phAssetID: video.id
+        )
+        appState.selectedVideos.append(item)
+        AppLog.videoScan("已选择：\(video.filename)")
     }
 
     /// 压缩方式入口 + 预估结果（明确标注为估算值）。
@@ -270,8 +348,11 @@ struct HomeView: View {
         let totalEstimate = estimates.reduce(Int64(0), +)
         let uncompressible = selected.count - estimates.count
 
-        if selected.count == 1, let est = estimates.first, let orig = selected.first?.fileSizeBytes {
+        if selected.count == 1, let est = estimates.first, let orig = selected.first?.fileSizeBytes, orig > 0 {
             return "预计约 \(Formatters.bytes(est))（原 \(Formatters.bytes(orig))，以编码结果为准）"
+        }
+        if selected.count == 1, (selected.first?.fileSizeBytes ?? 0) <= 0 {
+            return "大小暂不可用（将在压缩时确认）"
         }
         if totalEstimate < totalOriginal {
             var text = "预计节省约 \(Formatters.bytes(totalOriginal - totalEstimate))（估算值）"
@@ -291,6 +372,7 @@ struct HomeView: View {
             case .running:
                 if let i = session.currentIndex { return "正在压缩 \(i + 1) / \(session.tasks.count)" }
                 return "正在压缩…"
+            case .recording: return "记录压缩状态…"
             default: return "开始压缩"
             }
         }()
@@ -329,39 +411,72 @@ struct HomeView: View {
             return
         }
         guard !session.isRunning else { return }
+        activeGroupIndex = nil
+        startRun(selected, skippedCount: 0)
+    }
 
-        // 已压缩视频处理策略（文件名含 __VC__）
-        let processed = selected.filter { $0.title.contains(ProcessedMark.marker) }
+    /// 压缩整组（组内全部视频，不要求逐个手动勾选）。
+    private func startGroup(_ gi: Int) {
+        guard !session.isRunning else { return }
+        let items = groupVideos(gi).map { video in
+            VideoItem(
+                localIdentifier: video.id,
+                sourceURL: URL(fileURLWithPath: "/dev/null"),
+                title: video.filename,
+                durationSeconds: video.duration,
+                fileSizeBytes: video.fileSizeBytes ?? 0,
+                width: video.pixelWidth,
+                height: video.pixelHeight,
+                fps: 0,
+                codecDescription: "未知",
+                thumbnailURL: nil,
+                creationDate: nil,
+                phAssetID: video.id
+            )
+        }
+        guard !items.isEmpty else { return }
+        activeGroupIndex = gi
+        AppLog.ui("压缩第\(gi + 1)组（\(items.count) 个）")
+        startRun(items, skippedCount: 0)
+    }
+
+    /// 已压缩策略分发（skip / ask / recompress），随后启动。
+    private func startRun(_ items: [VideoItem], skippedCount: Int) {
+        let processed = items.filter { $0.title.contains(ProcessedMark.marker) }
         switch settings.processedPolicy {
         case .skip where !processed.isEmpty:
-            let remaining = selected.filter { !processed.contains($0) }
-            if remaining.isEmpty {
+            let remaining = items.filter { !processed.contains($0) }
+            guard !remaining.isEmpty else {
                 error = .unknown("所选视频都已压缩过（设置中可更改处理方式）")
                 return
             }
             skipNote = "已自动跳过 \(processed.count) 个已压缩视频"
-            launchRun(items: remaining)
+            launchRun(items: remaining, skippedCount: skippedCount + processed.count)
         case .ask where !processed.isEmpty:
-            askProcessedItems = processed
+            pendingRun = items
         default:
-            launchRun(items: selected)
+            launchRun(items: items, skippedCount: skippedCount)
         }
     }
 
-    private func launchRun(items: [VideoItem]) {
+    private func launchRun(items: [VideoItem], skippedCount: Int) {
         guard !items.isEmpty else {
             error = .unknown("没有可压缩的视频")
             return
         }
         for item in items {
-            guard item.fileSizeBytes > 0, item.durationSeconds > 0.2,
-                  FileManager.default.fileExists(atPath: item.sourceURL.path) else {
+            guard item.durationSeconds > 0.2 else {
+                error = .videoReadFailed
+                return
+            }
+            guard item.phAssetID != nil || FileManager.default.fileExists(atPath: item.sourceURL.path) else {
                 error = .videoReadFailed
                 return
             }
         }
-        AppLog.compress("selectedVideos=\(items.count)，profile=\(profile.mode.displayName)")
-        session.run(items: items, profile: profile, settings: settings) { startError in
+        AppLog.compress("selectedVideos=\(items.count)，profile=\(profile.mode.displayName)，group=\(activeGroupIndex.map { "\($0 + 1)" } ?? "无")")
+        session.run(items: items, profile: profile, settings: settings,
+                    groupIndex: activeGroupIndex, skippedCount: skippedCount) { startError in
             Task { @MainActor in error = startError }
         }
         appState.showProgressCover = true
@@ -372,7 +487,6 @@ struct HomeView: View {
 struct ScanVideoRow: View {
     let video: ScannedVideo
     let isSelected: Bool
-    let isExporting: Bool
     let onToggle: () -> Void
 
     var body: some View {
@@ -388,11 +502,6 @@ struct ScanVideoRow: View {
                             .font(.system(size: 18, weight: .bold))
                             .foregroundStyle(.white)
                     }
-                    if isExporting {
-                        ProgressView()
-                            .frame(width: 52, height: 52)
-                            .background(Color.black.opacity(0.3), in: RoundedRectangle(cornerRadius: 8))
-                    }
                 }
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 6) {
@@ -405,7 +514,7 @@ struct ScanVideoRow: View {
                                 .background(Color.green.opacity(0.12), in: Capsule())
                         }
                     }
-                    Text("\(Formatters.bytes(video.fileSizeBytes)) · \(Formatters.time(video.duration)) · \(video.resolutionText) · \(video.aspectText)")
+                    Text("\(video.fileSizeBytes.map { Formatters.bytes($0) } ?? "大小暂不可用") · \(Formatters.time(video.duration)) · \(video.resolutionText) · \(video.aspectText)")
                         .font(.caption).foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
@@ -415,6 +524,5 @@ struct ScanVideoRow: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(PressableButtonStyle())
-        .disabled(isExporting)
     }
 }

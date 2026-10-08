@@ -21,7 +21,8 @@ struct ScannedVideo: Identifiable {
     let id: String              // PHAsset.localIdentifier
     let asset: PHAsset
     let filename: String
-    let fileSizeBytes: Int64
+    /// 资源字节大小；PHAssetResource.dataSize 不可用时为 nil（显示「大小暂不可用」，绝不伪装 0 KB）。
+    let fileSizeBytes: Int64?
     let duration: Double
     let pixelWidth: Int
     let pixelHeight: Int
@@ -85,8 +86,9 @@ final class PhotoScanner: ObservableObject {
             let asset = fetch.object(at: i)
             let resources = PHAssetResource.assetResources(for: asset)
             let videoResource = resources.first { $0.type == .video } ?? resources.first
-            // KVC 读取资源文件大小（不加载文件内容）
-            let size = (videoResource?.value(forKey: "fileSize") as? Int64) ?? 0
+            // 文件大小：iOS SDK 未公开 PHAssetResource 的字节大小（且禁止 KVC 强读），
+            // 扫描阶段诚实返回 nil（UI 显示「大小暂不可用」）；真实大小在压缩时由导出文件获得并写入历史。
+            let size: Int64? = nil
             let filename = videoResource?.originalFilename ?? asset.value(forKey: "filename") as? String ?? "VIDEO_\(i)"
             items.append(ScannedVideo(
                 id: asset.localIdentifier,

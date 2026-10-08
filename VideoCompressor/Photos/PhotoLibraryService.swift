@@ -136,9 +136,11 @@ final class PhotoLibraryService {
 
     // MARK: - 清除 __VC__ 压缩标记
 
-    /// 清除单个视频的 __VC__ 标记：iOS 不支持重命名 PHAsset，
-    /// 安全做法 = 把原文件字节级导出 → 以去掉标记的文件名重新保存 → 删除旧资源。
+    /// 清除单个视频的 __VC__ 标记：iOS 不支持重命名 PHAsset。
+    /// 三步安全流程：①字节级导出 → 以干净文件名创建【新】资源 → ②验证新资源存在且文件名无标记
+    /// → ③删除旧资源（独立的 performChanges，可被系统确认拒绝）。
     /// 视频内容零改动（纯文件复制，无重编码、无画面/音频变化）。
+    /// 删除被拒时：新旧两个资源并存（无数据丢失），如实抛错提示。
     /// - Returns: 新资源的 localIdentifier。
     func clearProcessedMark(on asset: PHAsset) async throws -> String {
         let resources = PHAssetResource.assetResources(for: asset)
@@ -152,7 +154,7 @@ final class PhotoLibraryService {
         let cleanName = oldName.replacingOccurrences(of: ProcessedMark.marker, with: "")
         AppLog.mark("Remove __VC__：\(oldName) → \(cleanName)")
 
-        // 1. 字节级导出
+        // ① 字节级导出
         let tmpURL = TempFileManager.shared.newOutputURL(
             ext: (oldName as NSString).pathExtension.isEmpty ? "mov" : (oldName as NSString).pathExtension)
         try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
@@ -166,34 +168,46 @@ final class PhotoLibraryService {
         }
         defer { TempFileManager.shared.remove(tmpURL) }
 
-        // 2. 校验导出文件可读且非空
+        // 校验导出文件可读且非空
         let size = (try? FileManager.default.attributesOfItem(atPath: tmpURL.path)[.size] as? Int64) ?? 0
         guard size > 0 else { throw AppError.videoReadFailed }
 
-        // 3. 以干净文件名重新保存 + 4. 删除旧资源（同一 performChanges，保证原子性）
-        return try await withCheckedThrowingContinuation { (cont: CheckedContinuation<String, Error>) in
-            var newID: String?
+        // ② 创建新资源（干净文件名）
+        let newID: String = try await withCheckedThrowingContinuation { cont in
+            var placeholder: String?
             PHPhotoLibrary.shared().performChanges({
                 let options = PHAssetResourceCreationOptions()
                 options.originalFilename = cleanName
                 let request = PHAssetCreationRequest.forAsset()
                 request.addResource(with: .video, fileURL: tmpURL, options: options)
-                newID = request.placeholderForCreatedAsset?.localIdentifier
-                if let old = PHAsset.fetchAssets(withLocalIdentifiers: [asset.localIdentifier], options: nil).firstObject {
-                    PHAssetChangeRequest.deleteAssets([old] as NSArray)
-                }
+                placeholder = request.placeholderForCreatedAsset?.localIdentifier
             }) { success, error in
                 Task { @MainActor in
-                    if success, let id = newID, !id.isEmpty {
-                        AppLog.mark("Verify __VC__：清除完成，新资源 \(id)")
+                    if success, let id = placeholder, !id.isEmpty {
                         cont.resume(returning: id)
                     } else {
-                        AppLog.mark("[ERROR] 清除标记失败：\(error?.localizedDescription ?? "未知")")
-                        cont.resume(throwing: AppError.saveToPhotoFailed(error?.localizedDescription ?? "清除标记失败"))
+                        cont.resume(throwing: AppError.saveToPhotoFailed(error?.localizedDescription ?? "创建无标记副本失败"))
                     }
                 }
             }
         }
+
+        // 验证新资源存在且文件名无标记
+        guard let newAsset = PHAsset.fetchAssets(withLocalIdentifiers: [newID], options: nil).firstObject else {
+            throw AppError.saveToPhotoFailed("已创建无标记副本但验证失败（未删除任何资源）")
+        }
+        let newName = PHAssetResource.assetResources(for: newAsset).first?.originalFilename ?? ""
+        guard !ProcessedMark.isProcessed(filename: newName) else {
+            throw AppError.saveToPhotoFailed("新副本文件名仍含标记（未删除任何资源）")
+        }
+
+        // ③ 删除旧资源（独立 performChanges；被拒时新旧并存，无数据丢失）
+        let deleteResult = await deleteOriginals(localIdentifiers: [asset.localIdentifier])
+        if deleteResult.deleted.isEmpty {
+            throw AppError.deleteOriginalFailed("无标记副本已创建（\(newID)），但原带标记视频删除未获确认，两者均已保留")
+        }
+        AppLog.mark("Verify __VC__：清除完成，新资源 \(newID)")
+        return newID
     }
 
     // MARK: - 删除原视频（仅此处申请 readWrite）

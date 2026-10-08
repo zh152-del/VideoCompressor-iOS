@@ -1,4 +1,5 @@
 import SwiftUI
+import Photos
 
 /// 设置页：大标题 + 文字层级分组 + 轻分隔线，不堆卡片。
 struct SettingsView: View {
@@ -7,6 +8,9 @@ struct SettingsView: View {
     @State private var confirmClean = false
     @State private var clearingMarks = false
     @State private var markResult: String? = nil
+    @State private var clearProgress: (done: Int, total: Int)? = nil
+    @State private var confirmClearMarks = false
+    @State private var pendingMarkAssets: [PHAsset] = []
 
     var body: some View {
         NavigationStack {
@@ -43,27 +47,36 @@ struct SettingsView: View {
                 }
                 Section {
                     Button {
-                        clearingMarks = true
-                        Task {
-                            let assets = PhotoScanner.fetchProcessedAssets()
-                            var ok = 0
-                            for asset in assets {
-                                if (try? await PhotoLibraryService.shared.clearProcessedMark(on: asset)) != nil { ok += 1 }
-                            }
-                            markResult = "已清除 \(ok)/\(assets.count) 个标记"
-                            clearingMarks = false
-                        }
+                        pendingMarkAssets = PhotoScanner.fetchProcessedAssets()
+                        confirmClearMarks = true
                     } label: {
                         Text(clearingMarks ? "清除中…" : "清除所有已压缩标记").foregroundStyle(.red)
                     }
                     .disabled(clearingMarks)
+                    if let p = clearProgress {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("正在移除压缩标记 \(p.done) / \(p.total)")
+                                .font(.caption.weight(.medium))
+                            ProgressView(value: p.total > 0 ? Double(p.done) / Double(p.total) : 0)
+                        }
+                    }
                     if let r = markResult {
                         Text(r).font(.caption).foregroundStyle(.secondary)
                     }
                 } header: {
-                    Text("压缩标记")
+                    Text("压缩标记管理（标记：__VC__）")
                 } footer: {
-                    Text("清除标记 = 以原文件名重建同一视频（字节级复制，不重编码），并删除带标记的旧资源。视频可正常播放。")
+                    Text("清除标记 = 字节级复制并以原文件名重建，然后删除带标记的旧资源。视频内容不变，可正常播放。删除需系统确认。")
+                }
+                .confirmationDialog(
+                    "发现 \(pendingMarkAssets.count) 个已压缩标记",
+                    isPresented: $confirmClearMarks, titleVisibility: .visible) {
+                    Button("继续清除", role: .destructive) {
+                        clearAllMarks()
+                    }
+                    Button("取消", role: .cancel) { pendingMarkAssets = [] }
+                } message: {
+                    Text("清除后 App 将不再通过 __VC__ 识别这些视频为已压缩。不会删除视频、不会删除照片资源、不会清除历史记录。")
                 }
                 Section("外观") {
                     Picker("主题", selection: $settings.appearance) {
@@ -104,6 +117,36 @@ struct SettingsView: View {
             } message: {
                 Text("将删除应用中所有尚未保存的压缩临时文件。")
             }
+        }
+    }
+
+    /// 批量清除标记：逐个执行并显示真实进度（x / N），失败如实列出，绝不后台静默。
+    private func clearAllMarks() {
+        let assets = pendingMarkAssets
+        guard !assets.isEmpty else { return }
+        clearingMarks = true
+        markResult = nil
+        clearProgress = (0, assets.count)
+        Task {
+            var ok = 0
+            var failed: [String] = []
+            for (i, asset) in assets.enumerated() {
+                let name = PHAssetResource.assetResources(for: asset).first?.originalFilename ?? "未知"
+                do {
+                    _ = try await PhotoLibraryService.shared.clearProcessedMark(on: asset)
+                    ok += 1
+                } catch {
+                    failed.append(name)
+                }
+                clearProgress = (i + 1, assets.count)
+            }
+            markResult = failed.isEmpty
+                ? "已移除 \(ok) / \(assets.count) 个标记，全部成功"
+                : "已移除 \(ok) / \(assets.count) 个标记；失败 \(failed.count) 个：\(failed.prefix(3).joined(separator: "、"))\(failed.count > 3 ? " 等" : "")"
+            clearProgress = nil
+            clearingMarks = false
+            pendingMarkAssets = []
+            AppLog.mark("批量清除完成：成功 \(ok)，失败 \(failed.count)")
         }
     }
 }
