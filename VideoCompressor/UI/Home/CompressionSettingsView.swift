@@ -87,7 +87,7 @@ struct CompressionSettingsPage: View {
             Text("自定义参数")
                 .font(.headline)
 
-            Picker("目标分辨率", selection: profile.resolution) {
+            Picker("目标分辨率", selection: profile.custom.resolution) {
                 ForEach(PresetResolution.allCases) { r in
                     Text(r.displayName).tag(r)
                 }

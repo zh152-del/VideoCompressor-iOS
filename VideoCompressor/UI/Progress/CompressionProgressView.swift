@@ -122,7 +122,7 @@ struct CompressionProgressView: View {
                 }
                 .padding(18)
                 .frame(maxWidth: .infinity)
-                .glassPanel(cornerRadius: 18)
+                .floatSurface(cornerRadius: 18)
                 .padding(.horizontal, 24)
                 .padding(.top, 26)
             }
