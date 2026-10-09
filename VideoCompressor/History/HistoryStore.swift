@@ -240,8 +240,7 @@ final class HistoryStore: ObservableObject {
             }
             _ = try FileManager.default.replaceItemAt(fileURL, withItemAt: tmp,
                                                        backupItemName: nil,
-                                                       options: [.usingNewMetadataOnly],
-                                                       resultingItemURL: nil)
+                                                       options: [.usingNewMetadataOnly])
         } catch {
             AppLog.history("[ERROR] 历史写入失败：\(error.localizedDescription)")
             // 兜底：直接写（极端情况下 replace 失败时仍尽量落盘），失败则记录
