@@ -7,7 +7,7 @@ struct DiagnosticsView: View {
 
     @State private var entries: [DiagLogEntry] = []
     @State private var taskFilter: String = ""
-    @State private var exportTaskId: String? = nil
+    @State private var exportTaskId: String = ""
     @State private var showExporter = false
     @State private var exportFiles: [URL] = []
     @State private var statusMessage: String?
@@ -50,12 +50,12 @@ struct DiagnosticsView: View {
                 .buttonStyle(PressableButtonStyle())
                 .disabled(lastTaskId == nil)
 
-                if let t = lastTaskId {
+                if lastTaskId != nil {
                     TextField("指定任务 ID", text: $exportTaskId)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                     Button {
-                        prepareExport(scope: .specific(exportTaskId ?? t))
+                        prepareExport(scope: .specific(exportTaskId.isEmpty ? (lastTaskId ?? "") : exportTaskId))
                     } label: {
                         Label("导出指定任务", systemImage: "target")
                     }
@@ -124,7 +124,7 @@ struct DiagnosticsView: View {
     }
 
     private var filtered: [DiagLogEntry] {
-        let key = (taskFilter.isEmpty ? (exportTaskId ?? "") : taskFilter).trimmingCharacters(in: .whitespaces).lowercased()
+        let key = (taskFilter.isEmpty ? exportTaskId : taskFilter).trimmingCharacters(in: .whitespaces).lowercased()
         guard !key.isEmpty else { return entries }
         return entries.filter { ($0.taskId?.lowercased().contains(key) ?? false) }
     }
