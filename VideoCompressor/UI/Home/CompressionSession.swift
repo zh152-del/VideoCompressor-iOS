@@ -3,6 +3,15 @@ import SwiftUI
 import UIKit
 import Combine
 
+/// 被判定"超时跳过"的视频（不再出现在首页，只在设置页可查、可清空）。
+struct SkippedVideo: Codable, Identifiable, Equatable {
+    var id: String { assetID }
+    let assetID: String
+    let name: String
+    let date: Date
+    let sizeBytes: Int64
+}
+
 /// 压缩过程实时日志条目（等宽字体展示；只保留最近 300 条）。
 struct LiveLogEntry: Identifiable {
     let id = UUID()
@@ -55,11 +64,49 @@ final class CompressionSession: ObservableObject {
     @Published private(set) var currentOutputSize: Int64? = nil
     /// 正在执行超时恢复的任务序号（1-based）
     @Published private(set) var recoveringTaskIndex: Int? = nil
-    /// 存在"无法确认安全终止"的任务：已阻止后续调度，UI 明确提示
-    @Published private(set) var blockedByUncertainTask = false
+    /// 超时跳过的视频（首页不再显示；设置页可查看与清空）
+    @Published private(set) var timedOutSkips: [SkippedVideo] = []
+    /// 旧任务已被放弃（超时跳过）的标记：允许用户立即开始新任务，不提示"任务占用"
+    @Published private(set) var hasAbandonedStalledTask = false
     /// 批次开始时间 / 每任务开始时间（用于耗时展示）
     @Published private(set) var batchStartedAt: Date? = nil
     @Published private(set) var taskStartedAt: [Int: Date] = [:]
+
+    private static let skipsKey = "vc_timed_out_skips"
+
+    /// 超时跳过的视频 ID 集合（扫描时过滤）
+    var timedOutSkipIDs: Set<String> { Set(timedOutSkips.map(\.assetID)) }
+
+    /// 记录一次"超时跳过"（持久化，重启后仍然从首页排除）。
+    func markTimedOutSkip(assetID: String, name: String, sizeBytes: Int64) {
+        guard !assetID.isEmpty else { return }
+        if !timedOutSkips.contains(where: { $0.assetID == assetID }) {
+            timedOutSkips.insert(SkippedVideo(assetID: assetID, name: name, date: Date(), sizeBytes: sizeBytes),
+                                 at: 0)
+            if timedOutSkips.count > 500 { timedOutSkips.removeLast(timedOutSkips.count - 500) }
+            saveTimedOutSkips()
+        }
+        log("跳过", "该视频因超时未完成已被安全跳过，首页不再显示（可在设置页查看）", taskIndex: nil)
+    }
+
+    /// 清空超时跳过记录（这些视频会重新出现在首页）。
+    func clearTimedOutSkips() {
+        timedOutSkips = []
+        saveTimedOutSkips()
+        AppLog.compress("已清空超时跳过记录，视频重新参与扫描")
+    }
+
+    private func saveTimedOutSkips() {
+        if let data = try? JSONEncoder().encode(timedOutSkips) {
+            UserDefaults.standard.set(data, forKey: Self.skipsKey)
+        }
+    }
+    private func loadTimedOutSkips() {
+        if let data = UserDefaults.standard.data(forKey: Self.skipsKey),
+           let arr = try? JSONDecoder().decode([SkippedVideo].self, from: data) {
+            timedOutSkips = arr
+        }
+    }
 
     /// 100% 停滞超时阈值（秒）
     private let stallTimeoutSeconds: Double = 10
@@ -159,7 +206,9 @@ final class CompressionSession: ObservableObject {
             onStartError?(.unknown("尚未选择视频"))
             return
         }
-        guard phase == .idle || phase == .completed || phase == .cancelled else {
+        let canStart = (phase == .idle || phase == .completed || phase == .cancelled)
+            || (hasAbandonedStalledTask && !service.isCancelledFlag ? phase == .running : false)
+        guard canStart else {
             onStartError?(.unknown("已有压缩任务在进行中"))
             return
         }
@@ -179,7 +228,7 @@ final class CompressionSession: ObservableObject {
         currentRunID = runID
         liveLog = []
         recoveringTaskIndex = nil
-        blockedByUncertainTask = false
+        hasAbandonedStalledTask = false
         currentOutputSize = nil
         engineStates = [:]
         stallSinceUptime = [:]
@@ -221,6 +270,8 @@ final class CompressionSession: ObservableObject {
             for rawIdx in items.indices {
                 let idx = rawIdx + offset
                 if service.isCancelledFlag { break }   // 协作式取消（不再强制取消 Task）
+                // 旧任务（超时被跳过 / 已被新任务取代）立即停止后续副作用
+                if currentRunID != runID { break }
                 tasks[idx].status = .compressing(progress: 0)
                 overallProgress = Double(rawIdx) / Double(items.count)   // 起点：已完成任务占比
                 let taskNo = idx + 1
@@ -504,14 +555,21 @@ final class CompressionSession: ObservableObject {
                 self.recoveringTaskIndex = nil
                 self.stallSinceUptime[taskNo] = nil
             } else {
-                // 情况 D：无法证明资源已安全释放 → 阻断队列，UI 明确提示，不谎称清理成功
-                self.log("失败", "无法确认编码器是否已安全终止：已阻止后续任务调度，请返回后重试", taskIndex: taskNo)
-                self.blockedByUncertainTask = true
+                // 超时未结束 → 安全跳过（不再阻断、不再提示任务占用）：
+                // 1) 再次请求安全终止；2) 该任务标记为 skipped；3) 视频加入"已跳过"名单，首页不再显示；
+                // 4) 释放队列占用，用户可立即开始新任务（迟到的旧回调由 runID 守卫丢弃）。
+                self.log("跳过", "任务超时未完成，已请求安全终止并跳过该视频", taskIndex: taskNo)
+                self.cancelSignals[taskNo]?.requestCancel()
+                if let idx = self.indexOfTaskNo(taskNo) {
+                    let item = self.tasks[idx].item
+                    self.tasks[idx].status = .skipped
+                    if let pid = item.phAssetID ?? item.localIdentifier {
+                        self.markTimedOutSkip(assetID: pid, name: item.title, sizeBytes: item.fileSizeBytes)
+                    }
+                }
                 self.stopWatchdog(taskNo: taskNo)
                 self.recoveringTaskIndex = nil
-                if let idx = self.indexOfTaskNo(taskNo) {
-                    self.tasks[idx].status = .failure(.unknown("任务超时且无法确认安全终止"))
-                }
+                self.hasAbandonedStalledTask = true
             }
         }
     }

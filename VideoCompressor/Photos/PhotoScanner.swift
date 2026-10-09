@@ -123,9 +123,12 @@ final class PhotoScanner: ObservableObject {
                 pixelHeight: asset.pixelHeight
             ))
         }
-        videos = Self.sorted(items, by: sortMode)
-        status = items.isEmpty ? .done(count: 0) : (auth == .limited ? .limited : .done(count: items.count))
-        AppLog.videoScan("Asset Count=\(items.count)")
+        // 过滤：因超时被判定跳过的视频不再出现在首页（可在设置页查看/清空）
+        let skipIDs = FingerprintStoreLike.timedOutSkipIDs()
+        let visible = items.filter { !skipIDs.contains($0.id) }
+        videos = Self.sorted(visible, by: sortMode)
+        status = visible.isEmpty ? .done(count: 0) : (auth == .limited ? .limited : .done(count: visible.count))
+        AppLog.videoScan("Asset Count=\(visible.count)（已排除超时跳过 \(items.count - visible.count) 个）")
     }
 }
 

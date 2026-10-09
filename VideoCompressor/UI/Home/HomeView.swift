@@ -362,11 +362,15 @@ struct HomeView: View {
             error = .unknown("请先选择视频")
             return
         }
-        guard session.phase == .idle || session.phase == .completed || session.phase == .cancelled else {
+        // 有任务因超时被跳过（已放弃并请求安全终止）时，允许直接开始新任务，不提示"任务占用"
+        let canStart = (session.phase == .idle || session.phase == .completed || session.phase == .cancelled)
+            || session.hasAbandonedStalledTask
+        guard canStart else {
             error = .unknown("已有压缩任务在进行中")
             return
         }
-        guard !session.isRunning else { return }
+        // 旧任务已被放弃（超时跳过）时不再阻塞新任务
+        if session.isRunning, !session.hasAbandonedStalledTask { return }
 
         // 阈值规则只作用于「一键选择」纳入的项；手动选择不受影响
         let thresholdBytes = settings.skipSmallVideosEnabled

@@ -66,12 +66,13 @@ struct CompressionProgressView: View {
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(.green)
                 }
-                if session.blockedByUncertainTask {
-                    Label("任务异常，无法确认安全终止：已阻止后续任务，请返回后重试", systemImage: "exclamationmark.triangle")
-                        .font(.caption).foregroundStyle(.red)
+                if session.hasAbandonedStalledTask {
+                    Label("有任务因超时被跳过，可直接开始新的压缩（跳过记录见设置页）",
+                          systemImage: "info.circle")
+                        .font(.caption).foregroundStyle(.orange)
                         .padding(12)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color.red.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
+                        .background(Color.orange.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
                 }
                 failuresBlock
                 processLogPanel

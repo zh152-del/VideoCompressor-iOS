@@ -3,6 +3,8 @@ import SwiftUI
 /// 设置页：大标题 + 文字层级分组 + 轻分隔线，不堆卡片。
 struct SettingsView: View {
     @EnvironmentObject var settings: SettingsStore
+    @EnvironmentObject var appState: AppState
+    private var session: CompressionSession { appState.session }
     @EnvironmentObject var temp: TempFileManager
     @State private var confirmClean = false
 
@@ -56,6 +58,33 @@ struct SettingsView: View {
                         .font(.caption).foregroundStyle(.secondary)
                 } header: {
                     Text("一键压缩跳过规则")
+                }
+                Section {
+                    if session.timedOutSkips.isEmpty {
+                        Text("暂无超时跳过的视频")
+                            .font(.subheadline).foregroundStyle(.secondary)
+                    } else {
+                        ForEach(session.timedOutSkips) { v in
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(v.name).font(.subheadline).lineLimit(1)
+                                    Text("\(DateGrouper.label(for: v.date)) \(v.date.formatted(date: .omitted, time: .shortened)) · \(v.sizeBytes > 0 ? Formatters.bytes(v.sizeBytes) : "大小未知")")
+                                        .font(.caption).foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                                Text("已跳过")
+                                    .font(.caption.weight(.medium)).foregroundStyle(.orange)
+                            }
+                        }
+                        Button("清空记录（这些视频将重新出现在首页）") {
+                            session.clearTimedOutSkips()
+                        }
+                        .foregroundStyle(.red)
+                    }
+                } header: {
+                    Text("已跳过视频（\(session.timedOutSkips.count)）")
+                } footer: {
+                    Text("压缩进度长时间停在 100% 的视频会被自动安全停止并跳过，它们不会再出现在首页扫描列表中，也不会再自动参与压缩。清空记录后可重新参与。")
                 }
                 Section("外观") {
                     Picker("主题", selection: $settings.appearance) {
