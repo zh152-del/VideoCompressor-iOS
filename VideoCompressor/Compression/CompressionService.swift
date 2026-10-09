@@ -37,8 +37,13 @@ final class CompressionService {
     ///            （输出文件已被删除，原视频应保留，不得保存/删除原片）。
     func compress(item: VideoItem, profile: CompressionProfile,
                   preferredCodec: VideoCodec = .hevc,
-                  progress: ((Double) -> Void)? = nil) async throws -> CompressionResult {
-        let cancelled: () -> Bool = { [weak self] in self?.isCancelled ?? true }
+                  progress: ((Double) -> Void)? = nil,
+                  signal: TranscodeCancelSignal? = nil,
+                  onState: ((TranscodeState) -> Void)? = nil) async throws -> CompressionResult {
+        // 取消判定 = 会话标志 或 引擎安全取消信号（超时恢复用）
+        let cancelled: () -> Bool = { [weak self] in
+            (self?.isCancelled ?? true) || (signal?.isCancelled ?? false)
+        }
 
         // ---- 前置判定：估算已无法有效压缩 → 跳过编码，直接 noGain ----
         let estimate = BitrateCalculator.estimateOutputBytes(
@@ -64,7 +69,7 @@ final class CompressionService {
                 let retryProfile = CompressionProfile(mode: .high, custom: profile.custom)
                 (outputURL, outMeta, outSize) = try await encode(item: item, profile: retryProfile,
                                                                  preferredCodec: preferredCodec,
-                                                                 progress: nil, cancelled: cancelled)
+                                                                 progress: nil, cancelled: cancelled, onState: onState)
             }
         }
 
@@ -117,7 +122,7 @@ final class CompressionService {
                     targetSizeBytes: nil,
                     explicitBitrate: bitrate)
                 try await TranscodeEngine.transcode(asset: asset, outputURL: outputURL, options: opts,
-                                                    progress: progress, isCancelled: cancelled)
+                                                    progress: progress, isCancelled: cancelled, onState: onState)
             case .custom:
                 let wantHEVC = profile.custom.codec == .hevc
                 let useHEVC = wantHEVC && CodecSupport.isHEVCEncodingSupported()
@@ -128,7 +133,7 @@ final class CompressionService {
                     codec: useHEVC ? .hevc : .h264,
                     targetSizeBytes: profile.custom.targetSizeMB.map { Int64($0 * 1_000_000) })
                 try await TranscodeEngine.transcode(asset: asset, outputURL: outputURL, options: opts,
-                                                    progress: progress, isCancelled: cancelled)
+                                                    progress: progress, isCancelled: cancelled, onState: onState)
             }
         } catch {
             TempFileManager.shared.remove(outputURL)

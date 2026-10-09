@@ -3,6 +3,30 @@ import AVFoundation
 import CoreMedia
 import CoreVideo
 
+/// 引擎状态上报（供上层做超时恢复判断，不猜测）。
+enum TranscodeState {
+    case encoding        // 正在读取/写入样本
+    case finishing       // 样本写完，正在 finishWriting（写盘收尾）
+    case finished        // 编码与写入均正常结束（输出有效，尚未验证）
+    case failed(String)  // 明确失败
+    case cancelled       // 已取消，临时输出已清理
+}
+
+/// 跨线程安全取消信号：超时恢复与用户取消都通过它请求"安全终止"。
+final class TranscodeCancelSignal: @unchecked Sendable {
+    private let lock = NSLock()
+    private var requested = false
+
+    var isCancelled: Bool {
+        lock.lock(); defer { lock.unlock() }
+        return requested
+    }
+    /// 幂等：重复请求安全终止不会产生副作用。
+    func requestCancel() {
+        lock.lock(); requested = true; lock.unlock()
+    }
+}
+
 /// 自定义转码选项。
 struct TranscodeOptions {
     var maxHeight: Int?      // nil = 保持源分辨率（绝不放大）
@@ -28,7 +52,9 @@ struct TranscodeEngine {
 
     static func transcode(asset: AVAsset, outputURL: URL, options: TranscodeOptions,
                           progress: ((Double) -> Void)? = nil,
-                          isCancelled: (() -> Bool)? = nil) async throws {
+                          isCancelled: (() -> Bool)? = nil,
+                          onState: ((TranscodeState) -> Void)? = nil) async throws {
+        onState?(.encoding)
         AppLog.compress("Encoding start → \(outputURL.lastPathComponent)")
         try? FileManager.default.removeItem(at: outputURL)
         // 确保输出父目录存在，否则 AVAssetWriter 初始化会失败
@@ -297,6 +323,7 @@ struct TranscodeEngine {
 
         // 【稳定性】编码阶段结束、开始写盘收尾：给 UI 一个明确的阶段信号，
         // 避免"进度 100% 但长时间不动"的卡死观感。
+        onState?(.finishing)
         progress?(-1)
 
         // MARK: - 收尾（严格顺序：markAsFinished 已由泵执行 → finishWriting → 校验状态）
@@ -309,13 +336,15 @@ struct TranscodeEngine {
         if isCancelled?() == true {
             // 取消收尾：只删除本次任务的临时输出，绝不触碰原视频或已保存成品
             try? FileManager.default.removeItem(at: outputURL)
-            AppLog.compress("[Cancel] 编码已取消：临时输出已清理（\((outputURL.lastPathComponent))）")
+            AppLog.compress("[Cancel] 编码已取消：临时输出已清理（\(outputURL.lastPathComponent)）")
+            onState?(.cancelled)
             throw AppError.userCancelled
         }
         guard writer.status == .completed else {
             try? FileManager.default.removeItem(at: outputURL)
             let detail = encodingError.map { ($0 as? AppError)?.errorDescription } ?? writer.error?.localizedDescription
             AppLog.compress("[ERROR] 编码失败（writer.status=\(writer.status.rawValue)）：\(detail ?? "未知")")
+            onState?(.failed(detail ?? "写入失败"))
             throw AppError.compressionFailed(detail ?? "写入失败")
         }
 
@@ -354,6 +383,7 @@ struct TranscodeEngine {
             // 比例读取失败不阻断（个别容器元数据缺失），仅记录
             AppLog.compress("输出比例读取失败（不阻断）：\(error.localizedDescription)")
         }
+        onState?(.finished)
         AppLog.compress("Encoding complete：输出 \(Formatters.bytes(outSize))")
     }
 

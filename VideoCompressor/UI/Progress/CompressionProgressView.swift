@@ -7,6 +7,8 @@ struct CompressionProgressView: View {
     @ObservedObject var session: CompressionSession
     let onDone: () -> Void
     @State private var showDetails = false
+    /// 用户手动上划查看历史日志时为 true（此时不再强制自动滚动到底部）
+    @State private var userScrolledUp = false
 
     var body: some View {
         NavigationStack {
@@ -38,107 +40,243 @@ struct CompressionProgressView: View {
         }
     }
 
-    // MARK: - 运行中
+    // MARK: - 运行中（大百分比 + 实时过程面板）
 
     private var runningView: some View {
-        VStack(spacing: 0) {
-            VStack(spacing: 4) {
-                Text("正在压缩").font(.title2.bold())
-                Text("\(session.finishedCount) / \(session.tasks.count)")
-                    .font(.system(size: 44, weight: .bold, design: .rounded))
-                    .foregroundStyle(Color.accentColor)
-            }
-            .padding(.top, 60)
-
-            if let current = session.currentTask {
-                VStack(spacing: 6) {
-                    // 当前压缩视频封面：按 task.id 绑定，任务切换自动换图，异步结果不串图
-                    AssetThumbnail(assetIdentifier: current.item.localIdentifier, side: 120)
-                        .id(current.id)
-                    Text("当前压缩视频").font(.caption).foregroundStyle(.secondary)
-                    Text(current.item.title).font(.headline).lineLimit(1)
-                    // 阶段文案：让用户知道 App 正在工作，不是卡死
-                    Text(stageText(for: current))
-                        .font(.caption).foregroundStyle(.secondary)
-                    if current.status.isCompressing {
-                        ProgressBar(value: current.progressValue)
-                            .padding(.horizontal, 40)
-                            .padding(.top, 6)
+        ScrollView {
+            VStack(spacing: 14) {
+                percentHeader
+                if let current = session.currentTask {
+                    currentTaskBlock(current)
+                } else {
+                    // 【修复】当前任务不存在时也必须显示明确状态，而不是让界面元素消失
+                    VStack(spacing: 6) {
+                        Image(systemName: "checkmark.circle")
+                            .font(.system(size: 28)).foregroundStyle(.secondary)
+                        Text(session.isCancelling ? "正在取消…" : "等待下一个任务")
+                            .font(.headline)
+                        Text("已完成 \(session.finishedCount) / \(session.tasks.count)")
+                            .font(.subheadline).foregroundStyle(.secondary)
                     }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 30)
                 }
-                .padding(.top, 20)
+                if session.savedBytesSoFar > 0 {
+                    Text("已节省 \(Formatters.bytes(session.savedBytesSoFar))")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.green)
+                }
+                if session.blockedByUncertainTask {
+                    Label("任务异常，无法确认安全终止：已阻止后续任务，请返回后重试", systemImage: "exclamationmark.triangle")
+                        .font(.caption).foregroundStyle(.red)
+                        .padding(12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.red.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
+                }
+                failuresBlock
+                processLogPanel
+                cancelButton
+                    .padding(.top, 4)
             }
+            .padding(.horizontal, 20)
+            .padding(.top, 8)
+            .padding(.bottom, 24)
+        }
+        .scrollIndicators(.hidden)
+    }
 
-            if session.savedBytesSoFar > 0 {
-                Text("已节省 \(Formatters.bytes(session.savedBytesSoFar))")
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.green)
-                    .padding(.top, 16)
+    /// 放大的百分比 + 当前状态 + 任务序号（页面视觉中心）。
+    private var percentHeader: some View {
+        VStack(spacing: 6) {
+            Text(percentText)
+                .font(.system(size: 72, weight: .bold, design: .rounded))
+                .foregroundStyle(Color.accentColor)
+                .minimumScaleFactor(0.5)
+                .lineLimit(1)
+            Text(stageStatusText)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(.secondary)
+            if let idx = session.currentIndex, !session.tasks.isEmpty {
+                Text("第 \(idx + 1)/\(session.tasks.count) 个任务")
+                    .font(.caption).foregroundStyle(.tertiary)
             }
+            // 总体进度（真实：已完成任务 + 当前任务帧进度）
+            ProgressView(value: min(max(session.overallProgress, 0), 1))
+                .padding(.horizontal, 30)
+                .padding(.top, 2)
+            HStack {
+                Text("本任务耗时 \(Formatters.time(Int(session.currentTaskElapsed)))")
+                Spacer()
+                Text("批次耗时 \(Formatters.time(Int(session.batchElapsed)))")
+            }
+            .font(.caption2).foregroundStyle(.tertiary)
+            .padding(.horizontal, 30)
+        }
+    }
 
-            // 失败视频列表：实时更新（每失败一个立即出现，不等批次结束）
-            let failures = session.tasks.filter {
-                if case .failure = $0.status { return true } else { return false }
+    /// 真实百分比：来自编码器回调；处于结束阶段时显示 99%（不伪造 100%）。
+    private var percentText: String {
+        guard let t = session.currentTask else {
+            return session.finishedCount > 0 ? "100%" : "0%"
+        }
+        switch t.status {
+        case .compressing(let p):
+            // 编码最后一帧后立即进入 finalizing，保留 99% 不跳 100%
+            return "\(min(99, max(0, Int(p * 100))))%"
+        case .finalizing, .validating, .saving:
+            return "99%"
+        case .success, .noGain:
+            return "100%"
+        case .skipped:
+            return "跳过"
+        case .failure:
+            return "失败"
+        case .cancelled:
+            return "已取消"
+        case .pending:
+            return "0%"
+        }
+    }
+
+    /// 统一状态文案（唯一数据源：任务状态）。
+    private var stageStatusText: String {
+        if session.isCancelling { return "正在取消…" }
+        if session.recoveringTaskIndex != nil { return "正在恢复异常任务…" }
+        guard let t = session.currentTask else {
+            return session.finishedCount >= max(session.tasks.count, 1) ? "本批次处理完成" : "准备中"
+        }
+        switch t.status {
+        case .pending: return "正在准备视频"
+        case .compressing: return "正在编码"
+        case .finalizing: return "正在结束编码"
+        case .validating: return "正在验证输出"
+        case .saving: return "正在保存到照片图库"
+        case .success: return "已完成"
+        case .noGain: return "未节省空间，已保留原视频"
+        case .skipped: return "已跳过"
+        case .failure: return "处理失败"
+        case .cancelled: return "已取消"
+        }
+    }
+
+    /// 当前任务卡片：封面 + 名称 + 输入/输出大小。
+    private func currentTaskBlock(_ t: CompressionTaskModel) -> some View {
+        VStack(spacing: 8) {
+            AssetThumbnail(assetIdentifier: t.item.localIdentifier, side: 96)
+                .id(t.id)
+            Text(t.item.title).font(.subheadline.weight(.medium)).lineLimit(1)
+            HStack(spacing: 10) {
+                Text("输入 \(Formatters.bytes(t.item.fileSizeBytes))")
+                if let out = session.currentOutputSize {
+                    Text("输出 \(Formatters.bytes(out))")
+                }
+                Text(Formatters.time(t.item.durationSeconds))
             }
-            if !failures.isEmpty {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("失败的视频（\(failures.count)）")
-                        .font(.subheadline.weight(.medium)).foregroundStyle(.red)
-                    ForEach(failures) { t in
-                        HStack(spacing: 8) {
-                            AssetThumbnail(assetIdentifier: t.item.localIdentifier, side: 36)
-                                .id(t.id)
-                            Text(t.item.title).font(.caption).lineLimit(1)
-                            Spacer()
-                            if case .failure(let e) = t.status {
-                                Text(e.errorDescription).font(.caption2).foregroundStyle(.red).lineLimit(1)
-                            }
+            .font(.caption2).foregroundStyle(.secondary)
+            if case .compressing(let p) = t.status {
+                ProgressBar(value: p).padding(.top, 2)
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity)
+        .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
+    /// 失败视频列表（实时）。
+    @ViewBuilder
+    private var failuresBlock: some View {
+        let failures = session.tasks.filter {
+            if case .failure = $0.status { return true } else { return false }
+        }
+        if !failures.isEmpty {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("失败的视频（\(failures.count)）")
+                    .font(.subheadline.weight(.medium)).foregroundStyle(.red)
+                ForEach(failures) { t in
+                    HStack(spacing: 8) {
+                        AssetThumbnail(assetIdentifier: t.item.localIdentifier, side: 32)
+                            .id(t.id)
+                        Text(t.item.title).font(.caption).lineLimit(1)
+                        Spacer()
+                        if case .failure(let e) = t.status {
+                            Text(e.errorDescription).font(.caption2).foregroundStyle(.red).lineLimit(1)
                         }
                     }
                 }
-                .padding(12)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .padding(.horizontal, 24)
-                .padding(.top, 14)
             }
-
-            Spacer()
-
-            // 【稳定性】取消：点击后立即禁用并显示"正在取消…"，防重复点击/重复清理
-            Button(role: .destructive) {
-                session.cancel()
-            } label: {
-                Text(session.isCancelling ? "正在取消…" : "取消")
-                    .font(.body.weight(.medium))
-                    .foregroundStyle(session.isCancelling ? Color.secondary : Color.red)
-                    .padding(.horizontal, 36)
-                    .padding(.vertical, 12)
-                    .background(Capsule().fill(Color(.secondarySystemBackground)))
-            }
-            .buttonStyle(PressableButtonStyle())
-            .disabled(session.isCancelling)
-            .padding(.bottom, 30)
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
-        .frame(maxWidth: .infinity)
     }
 
-    /// 当前阶段文案。
-    private func stageText(for task: CompressionTaskModel) -> String {
-        switch task.status {
-        case .compressing(let p):
-            return "\(Formatters.bytes(task.item.fileSizeBytes)) → 编码中… \(Formatters.percent(p))"
-        case .finalizing:
-            return "编码已写完，正在完成编码与写入文件…"
-        case .validating:
-            return "正在验证输出文件…"
-        case .skipped:
-            return "已按规则跳过"
-        case .saving:
-            return "编码完成，验证输出并保存到照片…"
-        default:
-            return "准备中…"
+    /// 代码式实时过程面板（等宽字体；用户上划查看历史时不强制回到底部）。
+    private var processLogPanel: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text("实时过程").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                Spacer()
+                Text("\(session.liveLog.count) 条").font(.caption2).foregroundStyle(.tertiary)
+            }
+            ScrollViewReader { proxy in
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 2) {
+                        ForEach(session.liveLog) { entry in
+                            Text(line(for: entry))
+                                .font(.system(size: 11, design: .monospaced))
+                                .foregroundStyle(color(for: entry.stage))
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .id(entry.id)
+                        }
+                    }
+                    .padding(8)
+                }
+                .frame(height: 150)
+                .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .onChange(of: session.liveLog.count) { _, _ in
+                    // 仅在用户未手动上划时自动滚到底
+                    if !userScrolledUp, let last = session.liveLog.last {
+                        withAnimation(.easeOut(duration: 0.15)) { proxy.scrollTo(last.id, anchor: .bottom) }
+                    }
+                }
+                .simultaneousGesture(
+                    DragGesture().onChanged { _ in
+                        withAnimation(.easeOut(duration: 0.05)) { userScrolledUp = true }
+                    }
+                )
+            }
         }
+    }
+
+    private func line(for e: LiveLogEntry) -> String {
+        let task = e.taskIndex > 0 ? "[任务 \(e.taskIndex)/\(max(e.taskTotal, e.taskIndex))] " : "[批次] "
+        return "\(e.time) \(task)[\(e.stage)] \(e.text)"
+    }
+
+    private func color(for stage: String) -> Color {
+        switch stage {
+        case "失败": return .red
+        case "警告", "恢复": return .orange
+        case "完成": return .green
+        case "取消": return .secondary
+        default: return .primary
+        }
+    }
+
+    private var cancelButton: some View {
+        Button(role: .destructive) {
+            session.cancel()
+        } label: {
+            Text(session.isCancelling ? "正在取消…" : "取消")
+                .font(.body.weight(.medium))
+                .foregroundStyle(session.isCancelling ? Color.secondary : Color.red)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(Capsule().fill(Color(.secondarySystemBackground)))
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(PressableButtonStyle())
+        .disabled(session.isCancelling)
     }
 
     // MARK: - 完成总结
