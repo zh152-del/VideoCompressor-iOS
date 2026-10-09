@@ -237,7 +237,6 @@ final class CompressionSession: ObservableObject {
                 do {
                     let result = try await service.compress(item: items[rawIdx], profile: profile,
                                                             preferredCodec: settings.preferredCodec,
-                                                            progress: nil,
                                                             signal: signal,
                                                             onState: { st in
                         Task { @MainActor in
@@ -253,8 +252,10 @@ final class CompressionSession: ObservableObject {
                             default: break
                             }
                         }
-                    }) { p in
+                    },
+                                                            progress: { [weak self] p in
                         Task { @MainActor in
+                            guard let self else { return }
                             // 【稳定性】迟到回调隔离：旧任务/取消后不得再改动状态
                             guard let self, idx < self.tasks.count, self.currentRunID == runID else { return }
                             if self.isCancelling { return }

@@ -99,7 +99,8 @@ final class CompressionService {
     private func encode(item: VideoItem, profile: CompressionProfile,
                         preferredCodec: VideoCodec,
                         progress: ((Double) -> Void)?,
-                        cancelled: @escaping () -> Bool) async throws -> (URL, VideoMeta?, Int64) {
+                        cancelled: @escaping () -> Bool,
+                        onState: ((TranscodeState) -> Void)? = nil) async throws -> (URL, VideoMeta?, Int64) {
         let asset = AVAsset(url: item.sourceURL)
         let outputURL = TempFileManager.shared.newOutputURL()
 
