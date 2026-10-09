@@ -36,13 +36,10 @@ final class PhotoLibraryService {
     // MARK: - 保存视频（仅申请 addOnly）
 
     /// 将压缩后的视频保存到照片图库。
-    /// - Parameters:
-    ///   - fileURL: 待保存的视频文件（应为本地可读的 MP4/MOV/M4V）。
-    ///   - originalFilename: 保存到相册时的文件名（如 "IMG_1234__VC__.mp4"，用于 __VC__ 压缩标记）。
-    ///     通过 PHAssetCreationRequest 的 originalFilename 实现——保存时命名，零重编码、零内容改动。
+    /// - Parameter fileURL: 待保存的视频文件（本地可读的 MP4/MOV/M4V）。
     /// - Returns: 新保存资源的 `localIdentifier`，供后续定位或删除。
     /// - Throws: 权限被拒/受限、输出文件缺失/为空/格式不支持、图库写入失败等。
-    func saveVideo(at fileURL: URL, originalFilename: String? = nil) async throws -> String {
+    func saveVideo(at fileURL: URL) async throws -> String {
         // 0. 保存前校验输出文件（存在 / 可读 / 大小 > 0 / 类型受支持）
         try validateOutputFile(fileURL)
 
@@ -67,20 +64,12 @@ final class PhotoLibraryService {
             throw AppError.photoPermissionDenied
         }
 
-        // 3. 执行保存：创建请求可指定 originalFilename（__VC__ 标记），change block 内直接拿到 placeholder id
+        // 3. 执行保存：系统按原文件名导入（不做任何命名改动）
         return try await withCheckedThrowingContinuation { (cont: CheckedContinuation<String, Error>) in
             var placeholderID: String?
             PHPhotoLibrary.shared().performChanges({
-                if let name = originalFilename, !name.isEmpty {
-                    let options = PHAssetResourceCreationOptions()
-                    options.originalFilename = name
-                    let request = PHAssetCreationRequest.forAsset()
-                    request.addResource(with: .video, fileURL: fileURL, options: options)
-                    placeholderID = request.placeholderForCreatedAsset?.localIdentifier
-                } else {
-                    let request = PHAssetCreationRequest.creationRequestForAssetFromVideo(atFileURL: fileURL)
-                    placeholderID = request?.placeholderForCreatedAsset?.localIdentifier
-                }
+                let request = PHAssetCreationRequest.creationRequestForAssetFromVideo(atFileURL: fileURL)
+                placeholderID = request?.placeholderForCreatedAsset?.localIdentifier
             }) { success, error in
                 // 通过主线程 Task 回到主线程后再 resume，避免跨线程/执行器问题
                 Task { @MainActor in
@@ -88,9 +77,6 @@ final class PhotoLibraryService {
                         // 【保存确认】重新 fetch 对应 PHAsset，确认资源真实存在于图库
                         let fetched = PHAsset.fetchAssets(withLocalIdentifiers: [id], options: nil)
                         if fetched.count > 0 {
-                            if let name = originalFilename {
-                                AppLog.mark("Add __VC__：成品保存为 \(name)")
-                            }
                             cont.resume(returning: id)
                         } else {
                             cont.resume(throwing: AppError.saveToPhotoFailed("保存已提交但在图库中未找到对应资源"))
@@ -128,68 +114,6 @@ final class PhotoLibraryService {
                         _ = error.localizedDescription
                     } else {
                         cont.resume(returning: url)
-                    }
-                }
-            }
-        }
-    }
-
-    // MARK: - 清除 __VC__ 压缩标记
-
-    /// 清除单个视频的 __VC__ 标记：iOS 不支持重命名 PHAsset，
-    /// 安全做法 = 把原文件字节级导出 → 以去掉标记的文件名重新保存 → 删除旧资源。
-    /// 视频内容零改动（纯文件复制，无重编码、无画面/音频变化）。
-    /// - Returns: 新资源的 localIdentifier。
-    func clearProcessedMark(on asset: PHAsset) async throws -> String {
-        let resources = PHAssetResource.assetResources(for: asset)
-        guard let resource = resources.first(where: { $0.type == .video }) ?? resources.first else {
-            throw AppError.noVideoTrack
-        }
-        let oldName = resource.originalFilename
-        guard ProcessedMark.isProcessed(filename: oldName) else {
-            return asset.localIdentifier   // 无标记，无需处理
-        }
-        let cleanName = oldName.replacingOccurrences(of: ProcessedMark.marker, with: "")
-        AppLog.mark("Remove __VC__：\(oldName) → \(cleanName)")
-
-        // 1. 字节级导出
-        let tmpURL = TempFileManager.shared.newOutputURL(
-            ext: (oldName as NSString).pathExtension.isEmpty ? "mov" : (oldName as NSString).pathExtension)
-        try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
-            let opts = PHAssetResourceRequestOptions()
-            opts.isNetworkAccessAllowed = false
-            PHAssetResourceManager.default().writeData(for: resource, toFile: tmpURL, options: opts) { error in
-                Task { @MainActor in
-                    if let error { cont.resume(throwing: error) } else { cont.resume() }
-                }
-            }
-        }
-        defer { TempFileManager.shared.remove(tmpURL) }
-
-        // 2. 校验导出文件可读且非空
-        let size = (try? FileManager.default.attributesOfItem(atPath: tmpURL.path)[.size] as? Int64) ?? 0
-        guard size > 0 else { throw AppError.videoReadFailed }
-
-        // 3. 以干净文件名重新保存 + 4. 删除旧资源（同一 performChanges，保证原子性）
-        return try await withCheckedThrowingContinuation { (cont: CheckedContinuation<String, Error>) in
-            var newID: String?
-            PHPhotoLibrary.shared().performChanges({
-                let options = PHAssetResourceCreationOptions()
-                options.originalFilename = cleanName
-                let request = PHAssetCreationRequest.forAsset()
-                request.addResource(with: .video, fileURL: tmpURL, options: options)
-                newID = request.placeholderForCreatedAsset?.localIdentifier
-                if let old = PHAsset.fetchAssets(withLocalIdentifiers: [asset.localIdentifier], options: nil).firstObject {
-                    PHAssetChangeRequest.deleteAssets([old] as NSArray)
-                }
-            }) { success, error in
-                Task { @MainActor in
-                    if success, let id = newID, !id.isEmpty {
-                        AppLog.mark("Verify __VC__：清除完成，新资源 \(id)")
-                        cont.resume(returning: id)
-                    } else {
-                        AppLog.mark("[ERROR] 清除标记失败：\(error?.localizedDescription ?? "未知")")
-                        cont.resume(throwing: AppError.saveToPhotoFailed(error?.localizedDescription ?? "清除标记失败"))
                     }
                 }
             }

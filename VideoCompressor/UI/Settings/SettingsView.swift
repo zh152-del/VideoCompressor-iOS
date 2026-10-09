@@ -5,8 +5,6 @@ struct SettingsView: View {
     @EnvironmentObject var settings: SettingsStore
     @EnvironmentObject var temp: TempFileManager
     @State private var confirmClean = false
-    @State private var clearingMarks = false
-    @State private var markResult: String? = nil
 
     var body: some View {
         NavigationStack {
@@ -27,43 +25,6 @@ struct SettingsView: View {
                     Text("保存")
                 } footer: {
                     Text("压缩后体积不小于原视频时，不会保存也不会删除原视频。")
-                }
-                Section {
-                    Picker("已压缩视频", selection: $settings.processedPolicy) {
-                        ForEach(ProcessedPolicy.allCases) { p in Text(p.displayName).tag(p) }
-                    }
-                    if settings.processedPolicy == .ask {
-                        Text("每次询问：开始压缩时对已压缩视频弹窗，选择跳过或重新压缩。")
-                            .font(.caption).foregroundStyle(.secondary)
-                    }
-                } header: {
-                    Text("已压缩视频处理方式")
-                } footer: {
-                    Text("压缩成功的成品会以「原名__VC__」命名保存（不重编码、不改变内容），重装 App 后仍可识别。")
-                }
-                Section {
-                    Button {
-                        clearingMarks = true
-                        Task {
-                            let assets = PhotoScanner.fetchProcessedAssets()
-                            var ok = 0
-                            for asset in assets {
-                                if (try? await PhotoLibraryService.shared.clearProcessedMark(on: asset)) != nil { ok += 1 }
-                            }
-                            markResult = "已清除 \(ok)/\(assets.count) 个标记"
-                            clearingMarks = false
-                        }
-                    } label: {
-                        Text(clearingMarks ? "清除中…" : "清除所有已压缩标记").foregroundStyle(.red)
-                    }
-                    .disabled(clearingMarks)
-                    if let r = markResult {
-                        Text(r).font(.caption).foregroundStyle(.secondary)
-                    }
-                } header: {
-                    Text("压缩标记")
-                } footer: {
-                    Text("清除标记 = 以原文件名重建同一视频（字节级复制，不重编码），并删除带标记的旧资源。视频可正常播放。")
                 }
                 Section("外观") {
                     Picker("主题", selection: $settings.appearance) {

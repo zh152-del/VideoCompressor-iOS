@@ -2,7 +2,6 @@ import SwiftUI
 import Photos
 
 /// 主页「压缩」：自动扫描相册视频 + 规格展示 + 选择压缩 + 底部操作区。
-/// 已压缩识别：文件名含 __VC__（压缩成品保存时命名，重装 App 后仍可识别）。
 struct HomeView: View {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var temp: TempFileManager
@@ -12,8 +11,6 @@ struct HomeView: View {
     @State private var showSettingsPage = false
     @State private var error: AppError?
     @State private var exportingIDs: Set<String> = []
-    @State private var askProcessedItems: [VideoItem]? = nil   // 询问模式待定项
-    @State private var skipNote: String? = nil
 
     private var selected: [VideoItem] { appState.selectedVideos }
     private var profile: CompressionProfile { appState.profile }
@@ -61,23 +58,6 @@ struct HomeView: View {
                 }
                 .environmentObject(temp)
                 .environmentObject(settings)
-            }
-            // 询问模式：一次确认整批已压缩视频
-            .confirmationDialog("有 \(askProcessedItems?.count ?? 0) 个视频已压缩过",
-                                isPresented: Binding(
-                                    get: { askProcessedItems != nil },
-                                    set: { if !$0 { askProcessedItems = nil } }
-                                ), titleVisibility: .visible) {
-                Button("跳过这些视频") {
-                    let skip = Set(askProcessedItems?.map { $0.id } ?? [])
-                    launchRun(items: selected.filter { !skip.contains($0.id) })
-                }
-                Button("重新压缩", role: .destructive) {
-                    launchRun(items: selected)
-                }
-                Button("取消", role: .cancel) {}
-            } message: {
-                Text("文件名含 __VC__ 标记的视频之前已压缩过。跳过不会改动这些视频。")
             }
         }
         .overlay(alignment: .bottom) {
@@ -195,9 +175,6 @@ struct HomeView: View {
                 if video.id != scanner.videos.last?.id {
                     Divider().padding(.leading, 64)
                 }
-            }
-            if let note = skipNote {
-                Text(note).font(.caption).foregroundStyle(.secondary).padding(.top, 8)
             }
         }
     }
@@ -330,23 +307,9 @@ struct HomeView: View {
         }
         guard !session.isRunning else { return }
 
-        // 已压缩视频处理策略（文件名含 __VC__）
-        let processed = selected.filter { $0.title.contains(ProcessedMark.marker) }
-        switch settings.processedPolicy {
-        case .skip where !processed.isEmpty:
-            let remaining = selected.filter { !processed.contains($0) }
-            if remaining.isEmpty {
-                error = .unknown("所选视频都已压缩过（设置中可更改处理方式）")
-                return
-            }
-            skipNote = "已自动跳过 \(processed.count) 个已压缩视频"
-            launchRun(items: remaining)
-        case .ask where !processed.isEmpty:
-            askProcessedItems = processed
-        default:
-            launchRun(items: selected)
-        }
+        launchRun(items: selected)
     }
+
 
     private func launchRun(items: [VideoItem]) {
         guard !items.isEmpty else {
@@ -395,16 +358,7 @@ struct ScanVideoRow: View {
                     }
                 }
                 VStack(alignment: .leading, spacing: 3) {
-                    HStack(spacing: 6) {
-                        Text(video.filename).font(.subheadline.weight(.medium)).lineLimit(1)
-                        if video.isProcessed {
-                            Text("已压缩")
-                                .font(.caption2.weight(.medium))
-                                .foregroundStyle(.green)
-                                .padding(.horizontal, 5).padding(.vertical, 1)
-                                .background(Color.green.opacity(0.12), in: Capsule())
-                        }
-                    }
+                    Text(video.filename).font(.subheadline.weight(.medium)).lineLimit(1)
                     Text("\(Formatters.bytes(video.fileSizeBytes)) · \(Formatters.time(video.duration)) · \(video.resolutionText) · \(video.aspectText)")
                         .font(.caption).foregroundStyle(.secondary)
                         .lineLimit(1)

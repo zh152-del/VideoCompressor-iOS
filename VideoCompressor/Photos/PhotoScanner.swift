@@ -1,21 +1,6 @@
 import Foundation
 import Photos
 
-/// 标记常量：压缩成功的视频文件名会包含该字符串。
-/// 只存在于【压缩成品】的 PHAsset originalFilename 中（保存时命名，零重编码）。
-enum ProcessedMark {
-    static let marker = "__VC__"
-    /// 文件名是否已压缩。
-    static func isProcessed(filename: String) -> Bool { filename.contains(marker) }
-    /// 压缩成品保存名：原名去扩展 + __VC__ + 扩展名。重复压缩不会叠加标记。
-    static func markedName(for title: String) -> String {
-        let ns = title as NSString
-        let base = ns.deletingPathExtension.replacingOccurrences(of: marker, with: "")
-        let ext = ns.pathExtension.isEmpty ? "mp4" : ns.pathExtension
-        return "\(base)\(marker).\(ext)"
-    }
-}
-
 /// 首页扫描到的视频。
 struct ScannedVideo: Identifiable {
     let id: String              // PHAsset.localIdentifier
@@ -39,8 +24,6 @@ struct ScannedVideo: Identifiable {
         }
         return simplify(pixelWidth, pixelHeight)
     }
-    /// 已压缩识别：文件名包含 __VC__ 标记。
-    var isProcessed: Bool { ProcessedMark.isProcessed(filename: filename) }
 }
 
 /// 相册视频扫描器：启动后按需扫描，只读元数据（文件名/大小/时长/尺寸），
@@ -58,7 +41,8 @@ final class PhotoScanner: ObservableObject {
     @Published var videos: [ScannedVideo] = []
     @Published var status: ScanStatus = .idle
 
-    /// 扫描用户允许访问的全部视频（authorized/limited 均只返回授权范围）。
+    /// 扫描用户允许访问的全部视频。
+    /// 首次启动（未决定权限）时自动申请授权，授权完成后自动继续扫描。
     func scan() {
         let auth = PHPhotoLibrary.authorizationStatus(for: .readWrite)
         switch auth {
@@ -67,8 +51,16 @@ final class PhotoScanner: ObservableObject {
             AppLog.videoScan("权限被拒，无法扫描")
             return
         case .notDetermined:
+            // 【修复】App 启动时自动申请相册权限；用户同意后立即扫描
             status = .idle
-            return   // 由 UI 触发请求授权后再扫描
+            AppLog.videoScan("权限未决定，主动请求授权")
+            PHPhotoLibrary.requestAuthorization(for: .readWrite) { [weak self] newStatus in
+                Task { @MainActor in
+                    AppLog.videoScan("授权回调：\(newStatus.rawValue)")
+                    self?.scan()
+                }
+            }
+            return
         default:
             break
         }
@@ -99,25 +91,7 @@ final class PhotoScanner: ObservableObject {
             ))
         }
         videos = items
-        let processed = items.filter { $0.isProcessed }.count
         status = items.isEmpty ? .done(count: 0) : (auth == .limited ? .limited : .done(count: items.count))
-        AppLog.videoScan("Asset Count=\(items.count)，含 __VC__ 标记 \(processed) 个")
-    }
-
-    /// 全部带 __VC__ 标记的 PHAsset（设置页"清除标记"用）。
-    static func fetchProcessedAssets() -> [PHAsset] {
-        let options = PHFetchOptions()
-        options.predicate = NSPredicate(format: "mediaType == %d", PHAssetMediaType.video.rawValue)
-        let fetch = PHAsset.fetchAssets(with: .video, options: options)
-        var result: [PHAsset] = []
-        for i in 0..<fetch.count {
-            let asset = fetch.object(at: i)
-            let resources = PHAssetResource.assetResources(for: asset)
-            if let name = (resources.first { $0.type == .video } ?? resources.first)?.originalFilename,
-               ProcessedMark.isProcessed(filename: name) {
-                result.append(asset)
-            }
-        }
-        return result
+        AppLog.videoScan("Asset Count=\(items.count)")
     }
 }

@@ -154,10 +154,7 @@ final class CompressionSession: ObservableObject {
                     do {
                         tasks[idx].status = .saving
                         AppLog.photo("Save started：\(items[idx].title)")
-                        // 压缩成品以 __VC__ 标记文件名保存（保存时命名，零重编码）
-                        let markedName = ProcessedMark.markedName(for: items[idx].title)
-                        let savedID = try await PhotoLibraryService.shared.saveVideo(at: outputURL,
-                                                                                     originalFilename: markedName)
+                        let savedID = try await PhotoLibraryService.shared.saveVideo(at: outputURL)
                         AppLog.photo("Save succeeded：\(items[idx].title) → \(savedID)")
                         var final = result
                         final.savedPhotoLocalIdentifier = savedID
