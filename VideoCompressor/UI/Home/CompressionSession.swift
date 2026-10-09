@@ -35,6 +35,10 @@ final class CompressionSession: ObservableObject {
     @Published var phase: Phase = .idle
     @Published var overallProgress: Double = 0
     @Published var error: AppError?
+    /// 正在取消（UI 立即禁用取消按钮，防重复点击与重复清理）
+    @Published private(set) var isCancelling = false
+    /// 当前任务 ID：隔离"取消后旧任务回调污染新任务"的竞态
+    private(set) var currentRunID = UUID()
     /// 待删除原视频（仅包含「压缩成功且已确认保存到 Photos」的原视频标识）。
     /// 手动模式：用户在完成页一键删除；自动模式：批次结束后统一删除。
     @Published private(set) var pendingDeleteIDs: [String] = []
