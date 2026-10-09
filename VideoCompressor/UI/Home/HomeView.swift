@@ -404,19 +404,16 @@ struct HomeView: View {
             // 只选了一个（或全部）无法压缩的视频 → 明确提示
             AppLog.ui("预分析：\(uncompressible.count)/\(selected.count) 个视频可能无法压缩")
             error = .unknown("当前视频无法压缩")
+            // 记录到历史（可在历史/已压中查看原因），不做永久排除
             for item in uncompressible {
-                if let pid = item.localIdentifier {
-                    session.markUncompressibleSkip(assetID: pid, name: item.title, sizeBytes: item.fileSizeBytes)
-                }
+                session.writeHistory(CompressionSession.skippedEntry(for: item))
             }
             return
         }
         if !uncompressible.isEmpty {
             AppLog.ui("预分析：自动跳过 \(uncompressible.count) 个可能无法压缩的视频")
             for item in uncompressible {
-                if let pid = item.localIdentifier {
-                    session.markUncompressibleSkip(assetID: pid, name: item.title, sizeBytes: item.fileSizeBytes)
-                }
+                session.writeHistory(CompressionSession.skippedEntry(for: item))
             }
             let keep = selected.filter { item in !uncompressible.contains(where: { $0.id == item.id }) }
             launchRun(items: keep, ruleSkipped: uncompressible)

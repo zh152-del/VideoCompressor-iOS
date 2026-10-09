@@ -2,6 +2,8 @@ import Foundation
 import Photos
 
 /// 首页扫描排除依据（数据层执行，不只是隐藏 UI）。
+/// 说明：曾用于"超时跳过"的独立名单（SkippedVideo / timedOutSkips / saveTimedOutSkips）
+/// 已按要求彻底删除——预判跳过的视频只写入压缩历史，可在历史/已压中查看原因，不再有永久排除名单。
 enum ProcessedExclusion {
     /// 读取持久化历史中"压缩成功且成品 Asset 仍存在"的原视频 ID。
     /// 任一条件不满足（取消/失败/无Gain/成品已删除）都不排除。
@@ -24,19 +26,5 @@ enum ProcessedExclusion {
             }
         }
         return result
-    }
-}
-
-/// 供扫描器读取"超时跳过"名单（避免 PhotoScanner 依赖 CompressionSession）。
-enum FingerprintStoreLike {
-    private static let key = "vc_timed_out_skips"
-
-    /// 已被判定超时跳过的 PHAsset.localIdentifier 集合。
-    static func timedOutSkipIDs() -> Set<String> {
-        guard let data = UserDefaults.standard.data(forKey: key),
-              let arr = try? JSONDecoder().decode([SkippedVideo].self, from: data) else {
-            return []
-        }
-        return Set(arr.map(\.assetID))
     }
 }

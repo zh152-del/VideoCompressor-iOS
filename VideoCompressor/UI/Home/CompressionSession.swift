@@ -3,28 +3,6 @@ import SwiftUI
 import UIKit
 import Combine
 
-/// 被判定"无法压缩"而自动跳过的视频（不再出现在首页，只在设置页可查、可清空）。
-struct SkippedVideo: Codable, Identifiable, Equatable {
-    var id: String { assetID }
-    var assetID: String
-    var name: String
-    var date: Date
-    var sizeBytes: Int64
-    /// unverified = 预判"可能无法压缩"（尚未经真实编码证实，可重新参与）
-    /// confirmed = 真实编码多次失败，已确认不可处理（首页过滤）
-    var reason: String = "unverified"
-    var failCount: Int = 0
-
-    var isConfirmed: Bool { reason == "confirmed" }
-    var reasonText: String {
-        switch reason {
-        case "confirmed": return "已确认不可处理"
-        case "userSkip":  return "用户主动跳过"
-        default:          return "待重新检查（预判可能无法压缩）"
-        }
-    }
-}
-
 /// 压缩过程实时日志条目（等宽字体展示；只保留最近 300 条）。
 struct LiveLogEntry: Identifiable {
     let id = UUID()
@@ -76,74 +54,9 @@ final class CompressionSession: ObservableObject {
     /// 当前任务的输出文件大小（实际可获取时）
     @Published private(set) var currentOutputSize: Int64? = nil
     /// 无法压缩而自动跳过的视频（首页不再显示；设置页可查看与清空）
-    @Published private(set) var timedOutSkips: [SkippedVideo] = []
     /// 批次开始时间 / 每任务开始时间（用于耗时展示）
     @Published private(set) var batchStartedAt: Date? = nil
     @Published private(set) var taskStartedAt: [Int: Date] = [:]
-
-    private static let skipsKey = "vc_timed_out_skips"
-
-    /// 跳过视频 ID 集合（扫描时过滤）
-    var timedOutSkipIDs: Set<String> { Set(timedOutSkips.map(\.assetID)) }
-
-    /// 记录一次"预判无法压缩"（**待重新检查**，不排除首页，可重新参与）。
-    func markUncompressibleSkip(assetID: String, name: String, sizeBytes: Int64) {
-        guard !assetID.isEmpty else { return }
-        if !timedOutSkips.contains(where: { $0.assetID == assetID }) {
-            timedOutSkips.insert(SkippedVideo(assetID: assetID, name: name, date: Date(),
-                                              sizeBytes: sizeBytes, reason: "unverified", failCount: 0),
-                                 at: 0)
-            trimSkips()
-        }
-        log("跳过", "该视频可能无法压缩，已自动跳过，首页不再显示（可在设置页查看）", taskIndex: nil)
-    }
-
-    /// 记录一次真实编码失败：累计 2 次才判定"已确认不可处理"（首页过滤），
-    /// 避免一次偶发失败（iCloud 未下载等）就永久排除。
-    func recordEncodeFailure(assetID: String, name: String, sizeBytes: Int64) {
-        guard !assetID.isEmpty else { return }
-        if let idx = timedOutSkips.firstIndex(where: { $0.assetID == assetID }) {
-            timedOutSkips[idx].failCount += 1
-            if timedOutSkips[idx].failCount >= 2 { timedOutSkips[idx].reason = "confirmed" }
-            trimSkips()
-            saveTimedOutSkips()
-        } else {
-            timedOutSkips.insert(SkippedVideo(assetID: assetID, name: name, date: Date(),
-                                              sizeBytes: sizeBytes, reason: "unverified", failCount: 1), at: 0)
-            trimSkips()
-            saveTimedOutSkips()
-        }
-    }
-
-    /// 移除单条排除记录（该视频重新参与扫描与压缩）。
-    func removeSkip(assetID: String) {
-        timedOutSkips.removeAll { $0.assetID == assetID }
-        saveTimedOutSkips()
-    }
-
-    private func trimSkips() {
-        if timedOutSkips.count > 500 { timedOutSkips.removeLast(timedOutSkips.count - 500) }
-    }
-
-    /// 清空跳过记录（这些视频会重新出现在首页）。
-    func clearTimedOutSkips() {
-        timedOutSkips = []
-        saveTimedOutSkips()
-        AppLog.compress("已清空超时跳过记录，视频重新参与扫描")
-    }
-
-    private func saveTimedOutSkips() {
-        if let data = try? JSONEncoder().encode(timedOutSkips) {
-            UserDefaults.standard.set(data, forKey: Self.skipsKey)
-        }
-    }
-    private func loadTimedOutSkips() {
-        if let data = UserDefaults.standard.data(forKey: Self.skipsKey),
-           let arr = try? JSONDecoder().decode([SkippedVideo].self, from: data) {
-            timedOutSkips = arr
-        }
-    }
-
 
     // MARK: - 耗时（UI 只读）
 
@@ -322,6 +235,8 @@ final class CompressionSession: ObservableObject {
                     originalAssetIdentifier: items[rawIdx].localIdentifier)
                 taskEntryIDs[taskNo] = runningEntry.id
                 writeHistory(runningEntry)
+                DiagLog.beginTask(String(runningEntry.id.uuidString.prefix(8)))
+                AppLog.stage("准备", "任务\(taskNo)/\(tasks.count) 开始：\(items[rawIdx].title)（\(Formatters.bytes(items[rawIdx].fileSizeBytes))，\(items[rawIdx].width)×\(items[rawIdx].height)，\(items[rawIdx].codecDescription)）")
                 let itemStart = DispatchTime.now()
                 AppLog.compress("[Task \(runID.uuidString.prefix(8))] 任务\(idx + 1)/\(tasks.count) 开始：\(items[rawIdx].title)，\(Formatters.bytes(items[rawIdx].fileSizeBytes))")
 
@@ -334,6 +249,7 @@ final class CompressionSession: ObservableObject {
                             if self.isCancelling { return }
                             if p < 0 {
                                 self.tasks[idx].status = .finalizing
+                                AppLog.stage("写入", "样本写完，等待写入器完成")
                                 self.log("结束编码", "任务\(taskNo) 样本写完，等待写入器完成", taskIndex: taskNo)
                             } else {
                                 self.tasks[idx].status = .compressing(progress: p)
@@ -363,12 +279,14 @@ final class CompressionSession: ObservableObject {
                         AppLog.compress("[Task \(runID.uuidString.prefix(8))] 编码结束→写入完成，开始验证输出（\(String(format: "%.1f", Double(DispatchTime.now().uptimeNanoseconds - itemStart.uptimeNanoseconds) / 1e9))s）")
                         tasks[idx].status = .validating
                         log("验证", "任务\(taskNo) 正在检查输出文件", taskIndex: taskNo)
+                        AppLog.stage("验证", "开始校验输出文件")
                         guard !service.isCancelledFlag else {
                             tasks[idx].status = .cancelled
                             temp.remove(outputURL)
                             continue
                         }
                         tasks[idx].status = .saving
+                        AppLog.stage("保存", "输出 \(Formatters.bytes(result.outputSizeBytes))，开始保存到照片")
                         currentOutputSize = result.outputSizeBytes
                         log("保存", "任务\(taskNo) 输出 \(Formatters.bytes(result.outputSizeBytes))，开始保存到照片", taskIndex: taskNo)
                         AppLog.compress("[Task \(runID.uuidString.prefix(8))] 验证通过，开始保存 Photos")
@@ -383,6 +301,7 @@ final class CompressionSession: ObservableObject {
                         successEntry = Self.withId(successEntry, taskEntryIDs[taskNo])
                         self.writeHistory(successEntry)   // upsert：同一任务 id 覆盖 running
                         self.log("完成", "任务\(taskNo) 已保存到照片图库", taskIndex: taskNo)
+                        AppLog.stage("完成", "已保存到照片：\(savedID)")
 
                         // ---- 保存成功 → 原视频进入待删除队列（统一批量删除，绝不逐个删）----
                         if let orig = items[rawIdx].localIdentifier, !orig.isEmpty {
@@ -390,6 +309,7 @@ final class CompressionSession: ObservableObject {
                         }
                     } catch {
                         AppLog.photo("Save failed（原视频保留）：\(error.localizedDescription)")
+                        AppLog.failure("保存", "Photos保存", "保存到照片失败", error: error)
                         temp.remove(outputURL)
                         tasks[idx].status = .failure((error as? AppError) ?? .saveToPhotoFailed(error.localizedDescription))
                         self.writeHistory(Self.withId(Self.failedEntry(for: items[rawIdx], profile: profile),
@@ -453,14 +373,29 @@ final class CompressionSession: ObservableObject {
 
     // MARK: - 私有
 
-    /// 历史写入（统一入口，带日志，真实结果）。
-    private func writeHistory(_ entry: HistoryEntry) {
+    /// 历史写入（统一入口，带日志，真实结果）。任务开始/各阶段/终态都会调用，保证可追溯。
+    func writeHistory(_ entry: HistoryEntry) {
         AppLog.history("Write started：\(entry.name)，outcome=\(entry.outcome)")
         history.add(entry)
         AppLog.history("Write succeeded：\(entry.name)")
     }
 
     /// 失败条目：未产生输出，compressedBytes 记为 originalBytes（不假装节省）。
+    /// 预判跳过 / 规则跳过的历史条目（可在历史与已压页查看原因）。
+    static func skippedEntry(for item: VideoItem) -> HistoryEntry {
+        HistoryEntry(
+            id: UUID(), name: item.title,
+            originalBytes: item.fileSizeBytes, compressedBytes: item.fileSizeBytes, savedBytes: 0,
+            date: Date(), mode: "预判跳过",
+            sourceResolution: "\(item.width)×\(item.height)",
+            outputResolution: "\(item.width)×\(item.height)",
+            sourceCodec: item.codecDescription, outputCodec: "未压缩",
+            durationSeconds: item.durationSeconds,
+            savedAssetLocalIdentifier: nil, outcome: "skipped",
+            originalAssetIdentifier: item.localIdentifier
+        )
+    }
+
     /// 覆盖记录 ID（保持同一任务的历史只有一条，状态从 running → 终态）。
     private static func withId(_ entry: HistoryEntry, _ id: UUID?) -> HistoryEntry {
         guard let id else { return entry }

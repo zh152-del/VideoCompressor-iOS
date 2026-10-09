@@ -59,43 +59,22 @@ struct SettingsView: View {
                 } header: {
                     Text("一键压缩跳过规则")
                 }
-                Section {
-                    if session.timedOutSkips.isEmpty {
-                        Text("暂无超时跳过的视频")
-                            .font(.subheadline).foregroundStyle(.secondary)
-                    } else {
-                        ForEach(session.timedOutSkips) { v in
-                            HStack {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(v.name).font(.subheadline).lineLimit(1)
-                                    Text("\(DateGrouper.label(for: v.date)) \(v.date.formatted(date: .omitted, time: .shortened)) · \(v.sizeBytes > 0 ? Formatters.bytes(v.sizeBytes) : "大小未知")")
-                                        .font(.caption).foregroundStyle(.secondary)
-                                    Text(v.reasonText + (v.failCount > 0 ? "（失败 \(v.failCount) 次）" : ""))
-                                        .font(.caption2)
-                                        .foregroundStyle(v.isConfirmed ? Color.red : Color.orange)
-                                }
-                                Spacer()
-                                Button("移除") { session.removeSkip(assetID: v.assetID) }
-                                    .font(.caption.weight(.medium))
-                                    .foregroundStyle(Color.accentColor)
-                                    .buttonStyle(PressableButtonStyle())
-                            }
-                        }
-                        Button("清空记录（这些视频将重新出现在首页）") {
-                            session.clearTimedOutSkips()
-                        }
-                        .foregroundStyle(.red)
-                    }
-                } header: {
-                    Text("已跳过视频（\(session.timedOutSkips.count)）")
-                } footer: {
-                    Text("预判为可能无法压缩的视频会在开始压缩前自动跳过（不执行任何操作），但仍属\"待重新检查\"，不会从首页消失；只有真实编码连续失败 2 次才判定为已确认不可处理并从首页排除。清理记录只改变 App 内部状态，不会删除任何视频。")
-                }
                 Section("外观") {
                     Picker("主题", selection: $settings.appearance) {
                         ForEach(Appearance.allCases) { a in Text(a.displayName).tag(a) }
                     }
                     .pickerStyle(.segmented)
+                }
+                Section {
+                    NavigationLink {
+                        DiagnosticsView()
+                    } label: {
+                        Label("诊断日志（查看 / 导出）", systemImage: "doc.text.magnifyingglass")
+                    }
+                    Text("日志已落盘，可导出 TXT/JSON 到你在「文件」App 中选择的目录（如 WorkBuddy 文件夹）。")
+                        .font(.caption).foregroundStyle(.secondary)
+                } header: {
+                    Text("诊断")
                 }
                 Section("临时文件") {
                     HStack {

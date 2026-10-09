@@ -226,6 +226,7 @@ final class HistoryStore: ObservableObject {
     /// 下次启动 load 失败而清空全部历史。
     /// 原子写入 + 保留上一份备份；失败会记录日志（不假装成功）。
     private func save() {
+        AppLog.history("写入历史：\(entries.count) 条（最新 outcome=\(entries.first?.outcome ?? "-")）")
         guard let data = try? JSONEncoder().encode(entries) else {
             AppLog.history("[ERROR] 历史编码失败，本次记录未保存")
             return
