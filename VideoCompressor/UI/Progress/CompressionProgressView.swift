@@ -66,14 +66,6 @@ struct CompressionProgressView: View {
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(.green)
                 }
-                if session.hasAbandonedStalledTask {
-                    Label("有任务因超时被跳过，可直接开始新的压缩（跳过记录见设置页）",
-                          systemImage: "info.circle")
-                        .font(.caption).foregroundStyle(.orange)
-                        .padding(12)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color.orange.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
-                }
                 failuresBlock
                 processLogPanel
                 cancelButton
@@ -142,7 +134,6 @@ struct CompressionProgressView: View {
     /// 统一状态文案（唯一数据源：任务状态）。
     private var stageStatusText: String {
         if session.isCancelling { return "正在取消…" }
-        if session.recoveringTaskIndex != nil { return "正在恢复异常任务…" }
         guard let t = session.currentTask else {
             return session.finishedCount >= max(session.tasks.count, 1) ? "本批次处理完成" : "准备中"
         }

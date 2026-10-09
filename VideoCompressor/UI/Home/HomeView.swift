@@ -338,6 +338,11 @@ struct HomeView: View {
                 Spacer()
                 Text(estimateText).font(.caption).foregroundStyle(.secondary).lineLimit(1)
             }
+            if uncompressibleCount > 0 {
+                Text("其中 \(uncompressibleCount) 个可能无法压缩，将自动跳过")
+                    .font(.caption).foregroundStyle(.orange)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
             Button {
                 startCompression()
             } label: {
@@ -356,21 +361,63 @@ struct HomeView: View {
         .floatSurface(cornerRadius: 22)
     }
 
+    /// 预分析：判断该视频"可能无法压缩"（估算输出 ≥ 原始体积的 92%，或缺少估算条件）。
+    /// 与 CompressionService 的前置 noGain 判定使用同一套估算逻辑，口径一致。
+    private func isUncompressible(_ item: VideoItem) -> Bool {
+        guard item.fileSizeBytes > 0, item.durationSeconds > 0.2 else { return true }
+        guard let est = BitrateCalculator.estimateOutputBytes(
+                fileSizeBytes: item.fileSizeBytes,
+                durationSeconds: item.durationSeconds,
+                height: item.height, fps: item.fps,
+                mode: profile.mode, custom: profile.custom) else {
+            // 估算不出（如高分辨率下模式不降分辨率）→ 视为可能无法压缩
+            return true
+        }
+        return Double(est) >= Double(item.fileSizeBytes) * 0.92
+    }
+
+    /// 当前选择中"可能无法压缩"的视频数量（底部实时提示用）。
+    private var uncompressibleCount: Int {
+        selected.filter { isUncompressible($0) }.count
+    }
+
     private func startCompression() {
         AppLog.ui("Start compression tapped，已选 \(selected.count) 个")
         guard !selected.isEmpty else {
             error = .unknown("请先选择视频")
             return
         }
-        // 有任务因超时被跳过（已放弃并请求安全终止）时，允许直接开始新任务，不提示"任务占用"
-        let canStart = (session.phase == .idle || session.phase == .completed || session.phase == .cancelled)
-            || session.hasAbandonedStalledTask
-        guard canStart else {
+        guard session.phase == .idle || session.phase == .completed || session.phase == .cancelled else {
             error = .unknown("已有压缩任务在进行中")
             return
         }
-        // 旧任务已被放弃（超时跳过）时不再阻塞新任务
-        if session.isRunning, !session.hasAbandonedStalledTask { return }
+        guard !session.isRunning else { return }
+
+        // ---- 预分析：自动跳过"可能无法压缩"的视频（不执行任何操作）----
+        let uncompressible = selected.filter { isUncompressible($0) }
+        if uncompressible.count == selected.count, !selected.isEmpty {
+            // 只选了一个（或全部）无法压缩的视频 → 明确提示
+            AppLog.ui("预分析：\(uncompressible.count)/\(selected.count) 个视频可能无法压缩")
+            error = .unknown("当前视频无法压缩")
+            for item in uncompressible {
+                if let pid = item.localIdentifier {
+                    session.markUncompressibleSkip(assetID: pid, name: item.title, sizeBytes: item.fileSizeBytes)
+                }
+            }
+            return
+        }
+        if !uncompressible.isEmpty {
+            AppLog.ui("预分析：自动跳过 \(uncompressible.count) 个可能无法压缩的视频")
+            for item in uncompressible {
+                if let pid = item.localIdentifier {
+                    session.markUncompressibleSkip(assetID: pid, name: item.title, sizeBytes: item.fileSizeBytes)
+                }
+            }
+            let keep = selected.filter { !uncompressible.contains($0) }
+            launchRun(items: keep + selected.filter { !selected.contains(where: { uncompressible.contains($0) }) },
+                      ruleSkipped: uncompressible)
+            return
+        }
 
         // 阈值规则只作用于「一键选择」纳入的项；手动选择不受影响
         let thresholdBytes = settings.skipSmallVideosEnabled

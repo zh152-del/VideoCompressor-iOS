@@ -3,7 +3,7 @@ import SwiftUI
 import UIKit
 import Combine
 
-/// 被判定"超时跳过"的视频（不再出现在首页，只在设置页可查、可清空）。
+/// 被判定"无法压缩"而自动跳过的视频（不再出现在首页，只在设置页可查、可清空）。
 struct SkippedVideo: Codable, Identifiable, Equatable {
     var id: String { assetID }
     let assetID: String
@@ -62,23 +62,19 @@ final class CompressionSession: ObservableObject {
     @Published private(set) var liveLog: [LiveLogEntry] = []
     /// 当前任务的输出文件大小（实际可获取时）
     @Published private(set) var currentOutputSize: Int64? = nil
-    /// 正在执行超时恢复的任务序号（1-based）
-    @Published private(set) var recoveringTaskIndex: Int? = nil
-    /// 超时跳过的视频（首页不再显示；设置页可查看与清空）
+    /// 无法压缩而自动跳过的视频（首页不再显示；设置页可查看与清空）
     @Published private(set) var timedOutSkips: [SkippedVideo] = []
-    /// 旧任务已被放弃（超时跳过）的标记：允许用户立即开始新任务，不提示"任务占用"
-    @Published private(set) var hasAbandonedStalledTask = false
     /// 批次开始时间 / 每任务开始时间（用于耗时展示）
     @Published private(set) var batchStartedAt: Date? = nil
     @Published private(set) var taskStartedAt: [Int: Date] = [:]
 
     private static let skipsKey = "vc_timed_out_skips"
 
-    /// 超时跳过的视频 ID 集合（扫描时过滤）
+    /// 跳过视频 ID 集合（扫描时过滤）
     var timedOutSkipIDs: Set<String> { Set(timedOutSkips.map(\.assetID)) }
 
-    /// 记录一次"超时跳过"（持久化，重启后仍然从首页排除）。
-    func markTimedOutSkip(assetID: String, name: String, sizeBytes: Int64) {
+    /// 记录一次"无法压缩自动跳过"（持久化，重启后仍然从首页排除）。
+    func markUncompressibleSkip(assetID: String, name: String, sizeBytes: Int64) {
         guard !assetID.isEmpty else { return }
         if !timedOutSkips.contains(where: { $0.assetID == assetID }) {
             timedOutSkips.insert(SkippedVideo(assetID: assetID, name: name, date: Date(), sizeBytes: sizeBytes),
@@ -86,10 +82,10 @@ final class CompressionSession: ObservableObject {
             if timedOutSkips.count > 500 { timedOutSkips.removeLast(timedOutSkips.count - 500) }
             saveTimedOutSkips()
         }
-        log("跳过", "该视频因超时未完成已被安全跳过，首页不再显示（可在设置页查看）", taskIndex: nil)
+        log("跳过", "该视频可能无法压缩，已自动跳过，首页不再显示（可在设置页查看）", taskIndex: nil)
     }
 
-    /// 清空超时跳过记录（这些视频会重新出现在首页）。
+    /// 清空跳过记录（这些视频会重新出现在首页）。
     func clearTimedOutSkips() {
         timedOutSkips = []
         saveTimedOutSkips()
@@ -108,15 +104,6 @@ final class CompressionSession: ObservableObject {
         }
     }
 
-    /// 100% 停滞超时阈值（秒）
-    private let stallTimeoutSeconds: Double = 10
-    /// 超时后请求安全终止后的复查窗口（秒）
-    private let recoverGraceSeconds: Double = 5
-
-    private var engineStates: [Int: TranscodeState] = [:]
-    private var stallSinceUptime: [Int: UInt64] = [:]
-    private var watchdogTasks: [Int: Task<Void, Never>] = [:]
-    private var cancelSignals: [Int: TranscodeCancelSignal] = [:]
 
     // MARK: - 耗时（UI 只读）
 
@@ -206,9 +193,7 @@ final class CompressionSession: ObservableObject {
             onStartError?(.unknown("尚未选择视频"))
             return
         }
-        let canStart = (phase == .idle || phase == .completed || phase == .cancelled)
-            || (hasAbandonedStalledTask && !service.isCancelledFlag ? phase == .running : false)
-        guard canStart else {
+        guard phase == .idle || phase == .completed || phase == .cancelled else {
             onStartError?(.unknown("已有压缩任务在进行中"))
             return
         }
@@ -227,11 +212,7 @@ final class CompressionSession: ObservableObject {
         let runID = UUID()
         currentRunID = runID
         liveLog = []
-        recoveringTaskIndex = nil
-        hasAbandonedStalledTask = false
         currentOutputSize = nil
-        engineStates = [:]
-        stallSinceUptime = [:]
         taskStartedAt = [:]
         batchStartedAt = Date()
         log("准备", "开始本批任务：压缩 \(items.count) 个，规则跳过 \(ruleSkipped.count) 个", taskIndex: 0)
@@ -277,11 +258,7 @@ final class CompressionSession: ObservableObject {
                 let taskNo = idx + 1
                 taskStartedAt[taskNo] = Date()
                 currentOutputSize = nil
-                engineStates[taskNo] = .encoding
                 log("准备", "任务 \(taskNo)/\(tasks.count) 开始：\(Formatters.bytes(items[rawIdx].fileSizeBytes))", taskIndex: taskNo)
-                let signal = TranscodeCancelSignal()
-                cancelSignals[taskNo] = signal
-                startWatchdog(taskNo: taskNo, runID: runID)
                 let itemStart = DispatchTime.now()
                 AppLog.compress("[Task \(runID.uuidString.prefix(8))] 任务\(idx + 1)/\(tasks.count) 开始：\(items[rawIdx].title)，\(Formatters.bytes(items[rawIdx].fileSizeBytes))")
 
@@ -302,27 +279,11 @@ final class CompressionSession: ObservableObject {
                             }
                         }
                     },
-                                                            signal: signal,
-                                                            onState: { st in
-                        Task { @MainActor in
-                            guard self.currentRunID == runID else { return }
-                            self.engineStates[taskNo] = st
-                            switch st {
-                            case .finished:
-                                self.log("编码", "任务\(taskNo) 编码与写入完成", taskIndex: taskNo)
-                            case .failed(let m):
-                                self.log("失败", "引擎报告失败：\(m)", taskIndex: taskNo)
-                            case .cancelled:
-                                self.log("取消", "引擎已取消并清理临时输出", taskIndex: taskNo)
-                            default: break
-                            }
-                        }
-                    })
+                                                            signal: nil)
 
                     if result.noGain {
                         AppLog.compress("No gain：\(items[rawIdx].title)（\(Formatters.bytes(result.outputSizeBytes)) ≥ 原 \(Formatters.bytes(items[rawIdx].fileSizeBytes))），保留原视频")
                         tasks[idx].status = .noGain(result)
-                        stopWatchdog(taskNo: taskNo)
                         log("跳过", "任务\(taskNo) 未节省空间（原视频保留）", taskIndex: taskNo)
                         self.writeHistory(result.historyEntry(savedID: nil, outcome: "noGain"))
                         continue
@@ -357,7 +318,6 @@ final class CompressionSession: ObservableObject {
                         tasks[idx].status = .success(final)
                         self.writeHistory(final.historyEntry(savedID: savedID, outcome: "saved"))
                         self.log("完成", "任务\(taskNo) 已保存到照片图库", taskIndex: taskNo)
-                        stopWatchdog(taskNo: taskNo)
 
                         // ---- 保存成功 → 原视频进入待删除队列（统一批量删除，绝不逐个删）----
                         if let orig = items[rawIdx].localIdentifier, !orig.isEmpty {
@@ -386,8 +346,6 @@ final class CompressionSession: ObservableObject {
                 }
             }
 
-            watchdogTasks.values.forEach { $0.cancel() }
-            watchdogTasks = [:]
             log("批次", "全部任务结束：成功\(successCount) 跳过\(skippedCount) 失败\(failureCount)", taskIndex: 0)
             overallProgress = 1.0
             AppLog.compress("[Task \(runID.uuidString.prefix(8))] 全部结束：成功\(successCount) 跳过\(skippedCount) 失败\(failureCount)，总耗时\(String(format: "%.1f", Double(DispatchTime.now().uptimeNanoseconds - runStart.uptimeNanoseconds) / 1e9))s")
@@ -455,125 +413,6 @@ final class CompressionSession: ObservableObject {
     }
 
 
-    // MARK: - 100% 停滞看门狗与安全恢复
-
-    /// 启动某任务的看门狗：每 1 秒检查一次（不阻塞主线程/编码线程）。
-    /// 计时使用单调时钟（uptimeNanoseconds），不受系统时间变化影响。
-    private func startWatchdog(taskNo: Int, runID: UUID) {
-        stopWatchdog(taskNo: taskNo)
-        let watchdog = Task { @MainActor [weak self] in
-            while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: 1_000_000_000)
-                guard let self, self.currentRunID == runID else { return }
-                await self.checkStall(taskNo: taskNo, runID: runID)
-            }
-        }
-        watchdogTasks[taskNo] = watchdog
-    }
-
-    private func stopWatchdog(taskNo: Int) {
-        watchdogTasks[taskNo]?.cancel()
-        watchdogTasks[taskNo] = nil
-        stallSinceUptime[taskNo] = nil
-    }
-
-    /// 停滞检测：真实进度到 100% 后连续 N 秒仍未进入终态则触发恢复。
-    private func checkStall(taskNo: Int, runID: UUID) {
-        guard currentRunID == runID, let idx = indexOfTaskNo(taskNo), idx < tasks.count else { return }
-        let status = tasks[idx].status
-        if status.isFinished { stopWatchdog(taskNo: taskNo); return }
-        // 阶段判定：只有"进度已满且处于结束/验证/保存"阶段才算 100% 停滞
-        let atFullProgress: Bool
-        switch status {
-        case .compressing(let p): atFullProgress = p >= 0.999
-        case .finalizing, .validating, .saving: atFullProgress = true
-        default: atFullProgress = false
-        }
-        guard atFullProgress else { stallSinceUptime[taskNo] = nil; return }
-
-        let now = DispatchTime.now().uptimeNanoseconds
-        if stallSinceUptime[taskNo] == nil {
-            stallSinceUptime[taskNo] = now
-            log("警告", "进度已满但任务未结束，开始计时（阈值 \(Int(stallTimeoutSeconds)) 秒）", taskIndex: taskNo)
-            return
-        }
-        let elapsed = Double(now - (stallSinceUptime[taskNo] ?? now)) / 1e9
-        guard elapsed >= stallTimeoutSeconds else { return }
-        recoverStalledTask(taskNo: taskNo, runID: runID)
-    }
-
-    private func indexOfTaskNo(_ taskNo: Int) -> Int? {
-        let idx = taskNo - 1
-        return (idx >= 0 && idx < tasks.count) ? idx : nil
-    }
-
-    /// 超时恢复流程：先检查真实状态，再决定"修 UI / 安全终止 / 标记失败 / 阻断"。
-    /// 绝不直接删正在写入的文件，也绝不谎称能强制结束底层操作。
-    private func recoverStalledTask(taskNo: Int, runID: UUID) {
-        guard currentRunID == runID, let idx = indexOfTaskNo(taskNo) else { return }
-        let state = engineStates[taskNo]
-        recoveringTaskIndex = taskNo
-        log("恢复", "100% 超时 \(Int(stallTimeoutSeconds)) 秒，检查任务真实状态：\(String(describing: state))", taskIndex: taskNo)
-
-        switch state {
-        case .finished:
-            // 情况 A：编码与写入其实已完成（只是状态未同步）→ 修 UI，不重编码、不删输出
-            log("恢复", "已确认编码实际完成，修正任务状态（不重编码、不删除输出）", taskIndex: taskNo)
-            stopWatchdog(taskNo: taskNo)
-            recoveringTaskIndex = nil
-
-        case .failed, .cancelled:
-            // 情况 C：已明确失败/取消 → 清理临时输出并按失败处理
-            log("恢复", "已确认任务失败或取消，清理临时资源", taskIndex: taskNo)
-            stopWatchdog(taskNo: taskNo)
-            recoveringTaskIndex = nil
-
-        case .finishing:
-            // 情况 B：仍在结束流程 → 请求安全终止，给一个复查窗口，不强杀
-            log("恢复", "写入器仍在收尾，请求安全终止（不强杀、不删文件）", taskIndex: taskNo)
-            cancelSignals[taskNo]?.requestCancel()
-            scheduleRecoveryRecheck(taskNo: taskNo, runID: runID)
-
-        case .encoding, .none:
-            // 情况 D：进度已满但引擎未上报结束 → 同样走安全终止 + 复查
-            log("恢复", "引擎未确认进入结束阶段，请求安全终止并等待复查", taskIndex: taskNo)
-            cancelSignals[taskNo]?.requestCancel()
-            scheduleRecoveryRecheck(taskNo: taskNo, runID: runID)
-        }
-    }
-
-    /// 安全终止请求后的复查窗口：若引擎仍未上报终态，标记"无法确认安全终止"并阻断后续调度。
-    private func scheduleRecoveryRecheck(taskNo: Int, runID: UUID) {
-        Task { @MainActor [weak self] in
-            try? await Task.sleep(nanoseconds: UInt64(self?.recoverGraceSeconds ?? 5) * 1_000_000_000)
-            guard let self, self.currentRunID == runID else { return }
-            let status = self.indexOfTaskNo(taskNo).map { self.tasks[$0].status }
-            let finished = status?.isFinished ?? false
-            if finished {
-                self.log("恢复", "任务已安全终止，清理完成", taskIndex: taskNo)
-                self.stopWatchdog(taskNo: taskNo)
-                self.recoveringTaskIndex = nil
-                self.stallSinceUptime[taskNo] = nil
-            } else {
-                // 超时未结束 → 安全跳过（不再阻断、不再提示任务占用）：
-                // 1) 再次请求安全终止；2) 该任务标记为 skipped；3) 视频加入"已跳过"名单，首页不再显示；
-                // 4) 释放队列占用，用户可立即开始新任务（迟到的旧回调由 runID 守卫丢弃）。
-                self.log("跳过", "任务超时未完成，已请求安全终止并跳过该视频", taskIndex: taskNo)
-                self.cancelSignals[taskNo]?.requestCancel()
-                if let idx = self.indexOfTaskNo(taskNo) {
-                    let item = self.tasks[idx].item
-                    self.tasks[idx].status = .skipped
-                    if let pid = item.localIdentifier, !pid.isEmpty {
-                        self.markTimedOutSkip(assetID: pid, name: item.title, sizeBytes: item.fileSizeBytes)
-                    }
-                }
-                self.stopWatchdog(taskNo: taskNo)
-                self.recoveringTaskIndex = nil
-                self.hasAbandonedStalledTask = true
-            }
-        }
-    }
-
     /// 取消任务。【稳定性】幂等 + 协作式取消：
     /// - 只置取消标志，由编码泵自然退出后走统一收尾（删除本次临时输出）。
     /// - 不使用 runTask?.cancel()：那会强制中断 Task，与"泵内仍在写文件"并发，
@@ -588,10 +427,6 @@ final class CompressionSession: ObservableObject {
         isCancelling = true
         AppLog.compress("[Task \(currentRunID.uuidString.prefix(8))] 收到取消请求：协作式等待编码泵退出，不强制中断 Task")
         service.cancel()
-        // 线程安全地通知每个任务的引擎：请求安全终止（不直接释放对象）
-        cancelSignals.values.forEach { $0.requestCancel() }
-        watchdogTasks.values.forEach { $0.cancel() }
-        watchdogTasks = [:]
         log("取消", "收到取消请求，等待引擎安全停止", taskIndex: nil)
         // 正在等待 Photos 保存的任务不再强行中断：保存成功即保留成品，取消只影响未完成部分
     }
