@@ -54,8 +54,8 @@ struct HomeView: View {
                     thresholdMB: settings.skipSmallVideosThresholdMB,
                     skipEstimate: { n, _ in
                         let cands = Array(scanner.videos.prefix(n))
-                        guard settings.skipSmallVideosEnabled,
-                              let th = Int64(settings.skipSmallVideosThresholdMB * 1024 * 1024) else { return 0 }
+                        guard settings.skipSmallVideosEnabled else { return 0 }
+                        let th = Int64(settings.skipSmallVideosThresholdMB * 1024 * 1024)
                         return cands.filter { v in
                             guard let sz = v.fileSizeBytes, sz > 0 else { return false }
                             return sz < th
