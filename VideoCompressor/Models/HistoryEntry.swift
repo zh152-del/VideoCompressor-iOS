@@ -27,7 +27,6 @@ struct HistoryEntry: Identifiable, Codable, Equatable {
     var compressedFilename: String?
     /// 压缩成品时长（秒）；未知为 nil。
     var compressedDuration: Double?
-    var originalDeleteStatus: String
     var outcome: String
 
     init(id: UUID, name: String, originalBytes: Int64, compressedBytes: Int64, savedBytes: Int64,

@@ -53,7 +53,7 @@ struct BatchResultView: View {
            let entry = history.entries.first(where: { $0.savedAssetLocalIdentifier == savedID }) {
             ResultDetailView(entryID: entry.id)
         } else {
-            noResultDetail(task: task)
+            noResultDetail(task)
         }
     }
 

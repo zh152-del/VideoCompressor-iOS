@@ -59,7 +59,7 @@ struct BatchSelectPanel: View {
                 }
 
                 // 真实统计（按当前排序与阈值动态计算）
-                let skipped = skipEstimate(candidateCount)
+                let skipped = skipEstimate(candidateCount, 0)
                 VStack(alignment: .leading, spacing: 4) {
                     statLine("候选视频", "\(candidateCount) 个")
                     statLine("预计自动跳过", thresholdEnabled ? "\(skipped) 个" : "0 个（规则未开启）")

@@ -111,7 +111,7 @@ final class CompressionSession: ObservableObject {
         deletedOriginalIDs = []
         // 规则跳过项排在前面并直接置为 .skipped（不进入编码循环）
         let skippedModels: [CompressionTaskModel] = ruleSkipped.map { item in
-            let m = CompressionTaskModel(item: item, profile: profile)
+            var m = CompressionTaskModel(item: item, profile: profile)
             m.status = .skipped
             return m
         }

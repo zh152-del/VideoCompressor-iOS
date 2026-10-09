@@ -313,6 +313,8 @@ struct TaskResultRow: View {
                 .foregroundStyle(.orange)
         case .failure(let e):
             Text(e.errorDescription).foregroundStyle(.red)
+        case .skipped:
+            Text("已跳过（规则排除）").foregroundStyle(.secondary)
         case .saving:
             Text("保存到照片…").foregroundStyle(.secondary)
         case .cancelled:
