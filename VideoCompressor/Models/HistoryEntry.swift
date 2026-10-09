@@ -18,7 +18,8 @@ struct HistoryEntry: Identifiable, Codable, Equatable {
     let outputCodec: String
     let durationSeconds: Double
     /// 压缩成品在 Photos 中的资源标识（outputAssetIdentifier）。
-    let savedAssetLocalIdentifier: String?
+    /// 压缩成品 Photos 标识；成品被用户删除后置为 nil。
+    var savedAssetLocalIdentifier: String?
     /// 原视频在 Photos 中的资源标识（originalAssetIdentifier）。旧记录为 nil——无可靠标识就不显示删除按钮，绝不凭文件名猜删。
     var originalAssetIdentifier: String?
     /// 原视频删除状态：notDeleted / deleted。

@@ -52,7 +52,7 @@ struct HomeView: View {
                     totalScanned: scanner.videos.count,
                     thresholdEnabled: settings.skipSmallVideosEnabled,
                     thresholdMB: settings.skipSmallVideosThresholdMB,
-                    skipEstimate: { n in
+                    skipEstimate: { n, _ in
                         let cands = Array(scanner.videos.prefix(n))
                         guard settings.skipSmallVideosEnabled,
                               let th = Int64(settings.skipSmallVideosThresholdMB * 1024 * 1024) else { return 0 }
@@ -373,10 +373,12 @@ struct HomeView: View {
             ? Int64(settings.skipSmallVideosThresholdMB * 1024 * 1024) : nil
         if let th = thresholdBytes {
             let batch = selected.filter { batchSelectedIDs.contains($0.id.uuidString) }
-            let (skipped, kept) = batch.partition { item -> Bool in
+            let isBelowThreshold: (VideoItem) -> Bool = { item in
                 guard item.fileSizeBytes > 0 else { return false }   // 大小未知不跳过
                 return item.fileSizeBytes < th                        // 严格小于才跳过
             }
+            let skipped = batch.filter(isBelowThreshold)
+            let kept = batch.filter { !isBelowThreshold($0) }
             if !skipped.isEmpty {
                 launchRun(items: kept + selected.filter { !batchSelectedIDs.contains($0.id.uuidString) },
                           ruleSkipped: skipped)
