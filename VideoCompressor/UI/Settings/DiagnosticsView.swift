@@ -85,7 +85,7 @@ struct DiagnosticsView: View {
                             Text(DiagLogEntry.textFormatter.string(from: e.time))
                             Text(e.level).foregroundStyle(color(for: e.level))
                             Text(e.module)
-                            if let st = e.stage { Text(st) }
+                            if !e.stage.isEmpty { Text(e.stage) }
                             if let t = e.taskId { Text("task:\(String(t.prefix(8)))") }
                         }
                         .font(.system(size: 10, design: .monospaced))
