@@ -70,10 +70,15 @@ struct SettingsView: View {
                                     Text(v.name).font(.subheadline).lineLimit(1)
                                     Text("\(DateGrouper.label(for: v.date)) \(v.date.formatted(date: .omitted, time: .shortened)) · \(v.sizeBytes > 0 ? Formatters.bytes(v.sizeBytes) : "大小未知")")
                                         .font(.caption).foregroundStyle(.secondary)
+                                    Text(v.reasonText + (v.failCount > 0 ? "（失败 \(v.failCount) 次）" : ""))
+                                        .font(.caption2)
+                                        .foregroundStyle(v.isConfirmed ? Color.red : Color.orange)
                                 }
                                 Spacer()
-                                Text("已跳过")
-                                    .font(.caption.weight(.medium)).foregroundStyle(.orange)
+                                Button("移除") { session.removeSkip(assetID: v.assetID) }
+                                    .font(.caption.weight(.medium))
+                                    .foregroundStyle(Color.accentColor)
+                                    .buttonStyle(PressableButtonStyle())
                             }
                         }
                         Button("清空记录（这些视频将重新出现在首页）") {
@@ -84,7 +89,7 @@ struct SettingsView: View {
                 } header: {
                     Text("已跳过视频（\(session.timedOutSkips.count)）")
                 } footer: {
-                    Text("被判定为可能无法压缩的视频会在开始压缩前自动跳过，不会执行任何操作，也不会再出现在首页扫描列表中。清空记录后可重新参与。")
+                    Text("预判为可能无法压缩的视频会在开始压缩前自动跳过（不执行任何操作），但仍属\"待重新检查\"，不会从首页消失；只有真实编码连续失败 2 次才判定为已确认不可处理并从首页排除。清理记录只改变 App 内部状态，不会删除任何视频。")
                 }
                 Section("外观") {
                     Picker("主题", selection: $settings.appearance) {

@@ -11,18 +11,63 @@ final class HistoryStore: ObservableObject {
     private let fileURL: URL
 
     init() {
-        let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        self.fileURL = dir.appendingPathComponent("compression_history.json")
+        // 【持久化修复】改用 Documents 目录：会被 iCloud 备份、不会被系统当缓存清理。
+        // 历史"重启后消失"的部分原因是文件放在 Application Support（属可清理类目录）。
+        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        self.fileURL = docs.appendingPathComponent("compression_history.json")
+        migrateLegacyFileIfNeeded()
         load()
     }
 
+    /// 迁移旧版 Application Support 目录下的历史文件（升级后不丢老数据）。
+    private func migrateLegacyFileIfNeeded() {
+        let fm = FileManager.default
+        guard let legacyDir = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else { return }
+        let legacy = legacyDir.appendingPathComponent("compression_history.json")
+        var legacyExists = false
+        if (try? legacy.startAccessingSecurityScopedResource()) == nil { legacyExists = fm.fileExists(atPath: legacy.path) }
+        guard legacyExists, !fm.fileExists(atPath: fileURL.path),
+              let data = try? Data(contentsOf: legacy),
+              let arr = try? JSONDecoder().decode([HistoryEntry].self, from: data) else { return }
+        entries = arr.sorted { $0.date > $1.date }
+        save()
+        AppLog.history("已从旧目录迁移历史记录 \(arr.count) 条")
+    }
+
+    /// 读取历史。【持久化修复】
+    /// - 文件不存在 → 正常空（首次启动）。
+    /// - 文件存在但解码失败 → 备份为 .corrupt 并保留内存中的空，**绝不用空数组覆盖原文件**，
+    ///   否则一次解码失败就会永久丢掉全部历史（旧实现的真实丢失路径）。
     func load() {
-        guard let data = try? Data(contentsOf: fileURL),
-              let decoded = try? JSONDecoder().decode([HistoryEntry].self, from: data) else {
+        let fm = FileManager.default
+        guard fm.fileExists(atPath: fileURL.path) else {
             entries = []
+            // 尝试从临时文件恢复（上次写到一半崩溃）
+            if let tmp = tmpURL, fm.fileExists(atPath: tmp.path),
+               let data = try? Data(contentsOf: tmp),
+               let arr = try? JSONDecoder().decode([HistoryEntry].self, from: data) {
+                entries = arr.sorted { $0.date > $1.date }
+                AppLog.history("从临时文件恢复历史 \(arr.count) 条")
+                save()
+            }
             return
         }
-        entries = decoded.sorted { $0.date > $1.date }
+        do {
+            let data = try Data(contentsOf: fileURL)
+            let decoded = try JSONDecoder().decode([HistoryEntry].self, from: data)
+            entries = decoded.sorted { $0.date > $1.date }
+            AppLog.history("历史已加载：\(entries.count) 条")
+        } catch {
+            // 损坏：备份后不覆盖，等待用户后续新增时另存
+            let corrupt = fileURL.appendingPathExtension("corrupt-\(Int(Date().timeIntervalSince1970))")
+            try? fm.moveItem(at: fileURL, to: corrupt)
+            entries = []
+            AppLog.history("[ERROR] 历史文件损坏，已备份为 \(corrupt.lastPathComponent)：\(error.localizedDescription)")
+        }
+    }
+
+    private var tmpURL: URL? {
+        fileURL.deletingLastPathComponent().appendingPathComponent("compression_history.json.tmp")
     }
 
     /// 新增一条记录。
@@ -31,6 +76,42 @@ final class HistoryStore: ObservableObject {
     func add(_ entry: HistoryEntry) {
         entries = [entry] + entries
         save()
+    }
+
+    /// 更新同一任务记录（任务开始写 running，终态时用同一 id 覆盖为终态）。
+    /// 这样 App 被杀后重启，仍能看到这个任务真实发生了什么。
+    func upsert(_ entry: HistoryEntry) {
+        if let idx = entries.firstIndex(where: { $0.id == entry.id }) {
+            entries[idx] = entry
+        } else {
+            entries.insert(entry, at: 0)
+        }
+        save()
+    }
+
+    /// 启动恢复：上次退出时仍处于"进行中/结束中/验证中/保存中"的任务，
+    /// 说明进程已不存在（不可能仍在后台运行）→ 标记为"中断待处理"，绝不伪装成成功。
+    @discardableResult
+    func recoverInterrupted() -> Int {
+        let running = Set(["running", "finalizing", "validating", "saving"])
+        var changed = false
+        var count = 0
+        let updated = entries.map { e -> HistoryEntry in
+            guard running.contains(e.outcome) else { return e }
+            changed = true
+            count += 1
+            var n = e
+            n.outcome = "interrupted"
+            n.compressedFilename = nil
+            n.savedAssetLocalIdentifier = nil
+            return n
+        }
+        if changed {
+            entries = updated.sorted { $0.date > $1.date }
+            save()
+            AppLog.history("启动恢复：\(count) 个未完成任务标记为中断待处理")
+        }
+        return count
     }
 
     func remove(_ id: UUID) {
@@ -143,17 +224,29 @@ final class HistoryStore: ObservableObject {
 
     /// 原子写：先写临时文件，再 replace 覆盖，避免写一半被打断导致 JSON 损坏、
     /// 下次启动 load 失败而清空全部历史。
+    /// 原子写入 + 保留上一份备份；失败会记录日志（不假装成功）。
     private func save() {
-        guard let data = try? JSONEncoder().encode(entries) else { return }
-        let tmp = fileURL.deletingLastPathComponent()
-            .appendingPathComponent("compression_history.json.tmp")
+        guard let data = try? JSONEncoder().encode(entries) else {
+            AppLog.history("[ERROR] 历史编码失败，本次记录未保存")
+            return
+        }
+        guard let tmp = tmpURL else { return }
         do {
-            try data.write(to: tmp)
-            _ = try FileManager.default.replaceItem(at: fileURL, withItemAt: tmp,
-                                                    backupItemName: nil, options: [], resultingItemURL: nil)
+            try data.write(to: tmp, options: .atomic)
+            if FileManager.default.fileExists(atPath: fileURL.path) {
+                let bak = fileURL.appendingPathExtension("bak")
+                try? FileManager.default.removeItem(at: bak)
+                try? FileManager.default.copyItem(at: fileURL, to: bak)
+            }
+            _ = try FileManager.default.replaceItemAt(fileURL, withItemAt: tmp,
+                                                       backupItemName: nil,
+                                                       options: [.usingNewMetadataOnly],
+                                                       resultingItemURL: nil)
         } catch {
-            // 兜底：直接写（极端情况下 replace 失败时仍尽量落盘）
-            try? data.write(to: fileURL)
+            AppLog.history("[ERROR] 历史写入失败：\(error.localizedDescription)")
+            // 兜底：直接写（极端情况下 replace 失败时仍尽量落盘），失败则记录
+            do { try data.write(to: fileURL, options: .atomic) }
+            catch { AppLog.history("[ERROR] 历史兜底写入仍失败：\(error.localizedDescription)") }
         }
     }
 }

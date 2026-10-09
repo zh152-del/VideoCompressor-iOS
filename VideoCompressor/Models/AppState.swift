@@ -26,6 +26,8 @@ final class AppState: ObservableObject {
     private init() {
         profile.mode = SettingsStore.shared.defaultMode
         AppLog.app("启动：AppState 初始化完成")
+        // 启动恢复：上次退出时未完成的任务标记为"中断待处理"（绝不伪装成成功）
+        HistoryStore.shared.recoverInterrupted()
     }
 
     var isBusy: Bool { session.isRunning }

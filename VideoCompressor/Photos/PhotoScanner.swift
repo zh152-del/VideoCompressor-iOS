@@ -123,12 +123,14 @@ final class PhotoScanner: ObservableObject {
                 pixelHeight: asset.pixelHeight
             ))
         }
-        // 过滤：因超时被判定跳过的视频不再出现在首页（可在设置页查看/清空）
+        // 过滤（数据层执行）：
+        // ① 已确认不可处理的视频；② 已成功压缩且成品仍存在的视频（避免重复压缩）
         let skipIDs = FingerprintStoreLike.timedOutSkipIDs()
-        let visible = items.filter { !skipIDs.contains($0.id) }
+        let doneIDs = ProcessedExclusion.successfullyCompressedIDs()
+        let visible = items.filter { !skipIDs.contains($0.id) && !doneIDs.contains($0.id) }
         videos = Self.sorted(visible, by: sortMode)
         status = visible.isEmpty ? .done(count: 0) : (auth == .limited ? .limited : .done(count: visible.count))
-        AppLog.videoScan("Asset Count=\(visible.count)（已排除超时跳过 \(items.count - visible.count) 个）")
+        AppLog.videoScan("Asset Count=\(visible.count)（已排除：已确认不可处理 \(skipIDs.count) / 已成功压缩 \(doneIDs.count)，本次排除 \(items.count - visible.count)）")
     }
 }
 

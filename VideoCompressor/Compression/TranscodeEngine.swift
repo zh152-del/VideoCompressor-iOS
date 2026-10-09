@@ -233,16 +233,19 @@ struct TranscodeEngine {
         // MARK: - 采样泵（背压正确处理：等待重试同一样本，绝不丢失）
 
         /// 等待 input ready（10ms 轮询，随时响应取消）。
+        /// 等待写入器可接收下一个样本。
+        /// 【移除超时机制】原先存在"等待超过 30 秒即中止"的基于时间的终止逻辑，已删除：
+        /// 现在只在用户主动取消（isCancelled）时中断，否则一直等待写入器就绪，
+        /// 避免把"耗时较长的正常编码"误判为异常而中断。
         func waitForInput(_ input: AVAssetWriterInput) async -> Bool {
-            var spins = 0
+            var waitedSeconds = 0
             while !input.isReadyForMoreMediaData {
                 if isCancelled?() == true { return false }
-                spins += 1
-                if spins > 3000 {   // ~30s 仍未 ready：编码器异常，避免死循环
-                    AppLog.compress("[ERROR] input 超过 30s 未 ready，终止")
-                    return false
-                }
                 try? await Task.sleep(nanoseconds: 10_000_000)
+                waitedSeconds += 1
+                if waitedSeconds % 60 == 0 {   // 仅诊断日志，不是终止条件
+                    AppLog.compress("[等待] 写入器已等待 \(waitedSeconds) 秒，仍在编码中…")
+                }
             }
             return true
         }

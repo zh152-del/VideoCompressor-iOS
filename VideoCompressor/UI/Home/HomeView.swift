@@ -361,17 +361,22 @@ struct HomeView: View {
         .floatSurface(cornerRadius: 22)
     }
 
-    /// 预分析：判断该视频"可能无法压缩"（估算输出 ≥ 原始体积的 92%，或缺少估算条件）。
-    /// 与 CompressionService 的前置 noGain 判定使用同一套估算逻辑，口径一致。
+    /// 预分析：判断该视频"可能无法压缩"。
+    ///
+    /// 判定口径（修复 900/1000 误判）：
+    /// - 文件大小未知 / 时长异常 / 估算失败 → **一律放行**，交给真实编码尝试。
+    ///   （旧实现把这些一律判为"无法压缩"，导致扫描到的视频几乎全被误杀）
+    /// - 只有估算输出明确 ≥ 原体积 92% 时，才判为"可能无法压缩"（与压缩器 noGain 判定同口径）。
+    /// - fps 未知时按 30fps 估算，避免估算偏差。
     private func isUncompressible(_ item: VideoItem) -> Bool {
-        guard item.fileSizeBytes > 0, item.durationSeconds > 0.2 else { return true }
+        guard item.fileSizeBytes > 0, item.durationSeconds > 0.2 else { return false }
+        let fps = item.fps > 0 ? item.fps : 30
         guard let est = BitrateCalculator.estimateOutputBytes(
                 fileSizeBytes: item.fileSizeBytes,
                 durationSeconds: item.durationSeconds,
-                height: item.height, fps: item.fps,
+                height: item.height, fps: fps,
                 mode: profile.mode, custom: profile.custom) else {
-            // 估算不出（如高分辨率下模式不降分辨率）→ 视为可能无法压缩
-            return true
+            return false   // 估算失败不判死刑
         }
         return Double(est) >= Double(item.fileSizeBytes) * 0.92
     }
