@@ -55,6 +55,8 @@ final class CompressionSession: ObservableObject {
     var successCount: Int { tasks.filter { if case .success = $0.status { return true } else { return false } }.count }
     var noGainCount: Int { tasks.filter { if case .noGain = $0.status { return true } else { return false } }.count }
     var failureCount: Int { tasks.filter { if case .failure = $0.status { return true } else { return false } }.count }
+    /// 规则跳过数量（不启动编码器）。
+    var skippedCount: Int { tasks.filter { if case .skipped = $0.status { return true } else { return false } }.count }
     var finishedCount: Int { tasks.filter { $0.status.isFinished }.count }
     var savedToPhotosCount: Int { successCount }
 
@@ -81,8 +83,10 @@ final class CompressionSession: ObservableObject {
 
     /// 启动批量压缩。单个与批量共用同一核心流程（items.count == 1 时 UI 展示不同而已）。
     /// 启动被拒（无视频 / 正在运行 / 源文件已失效）时通过 `onStartError` 回调报告，绝不静默。
+    /// - Parameter ruleSkipped: 因规则（如小于阈值）跳过的视频：不启动编码器、不产出、不删原视频。
     func run(items: [VideoItem], profile: CompressionProfile,
              settings: SettingsStore,
+             ruleSkipped: [VideoItem] = [],
              onStartError: ((AppError) -> Void)? = nil) {
         guard !items.isEmpty else {
             onStartError?(.unknown("尚未选择视频"))
@@ -105,7 +109,16 @@ final class CompressionSession: ObservableObject {
         error = nil
         pendingDeleteIDs = []
         deletedOriginalIDs = []
-        tasks = items.map { CompressionTaskModel(item: $0, profile: profile) }
+        // 规则跳过项排在前面并直接置为 .skipped（不进入编码循环）
+        let skippedModels: [CompressionTaskModel] = ruleSkipped.map { item in
+            let m = CompressionTaskModel(item: item, profile: profile)
+            m.status = .skipped
+            return m
+        }
+        tasks = skippedModels + items.map { CompressionTaskModel(item: $0, profile: profile) }
+        for m in skippedModels {
+            AppLog.compress("规则跳过（不编码、不删原视频）：\(m.item.title)")
+        }
         service.resetCancellation()
         AppLog.compress("Run started：\(items.count) 个视频，模式：\(profile.mode.displayName)")
 
@@ -123,14 +136,16 @@ final class CompressionSession: ObservableObject {
 
         runTask = Task {
             self.phase = .running
-            for idx in items.indices {
+            let offset = ruleSkipped.count   // 前 offset 个任务是规则跳过项
+            for rawIdx in items.indices {
+                let idx = rawIdx + offset
                 if Task.isCancelled || service.isCancelledFlag { break }
                 tasks[idx].status = .compressing(progress: 0)
-                overallProgress = Double(idx) / Double(items.count)
-                AppLog.compress("Task started [\(idx + 1)/\(items.count)]：\(items[idx].title)，原始 \(Formatters.bytes(items[idx].fileSizeBytes))")
+                overallProgress = Double(rawIdx) / Double(items.count)
+                AppLog.compress("Task started [\(idx + 1)/\(tasks.count)]：\(items[rawIdx].title)，原始 \(Formatters.bytes(items[rawIdx].fileSizeBytes))")
 
                 do {
-                    let result = try await service.compress(item: items[idx], profile: profile,
+                    let result = try await service.compress(item: items[rawIdx], profile: profile,
                                                             preferredCodec: settings.preferredCodec) { [weak self] p in
                         Task { @MainActor in
                             guard let self, idx < self.tasks.count else { return }
@@ -139,7 +154,7 @@ final class CompressionSession: ObservableObject {
                     }
 
                     if result.noGain {
-                        AppLog.compress("No gain：\(items[idx].title)（\(Formatters.bytes(result.outputSizeBytes)) ≥ 原 \(Formatters.bytes(items[idx].fileSizeBytes))），保留原视频")
+                        AppLog.compress("No gain：\(items[rawIdx].title)（\(Formatters.bytes(result.outputSizeBytes)) ≥ 原 \(Formatters.bytes(items[rawIdx].fileSizeBytes))），保留原视频")
                         tasks[idx].status = .noGain(result)
                         self.writeHistory(result.historyEntry(savedID: nil, outcome: "noGain"))
                         continue
@@ -148,14 +163,14 @@ final class CompressionSession: ObservableObject {
                     // ---- 保存到照片图库（成功后才允许删除原视频）----
                     guard let outputURL = result.outputURL else {
                         tasks[idx].status = .failure(.outputFileMissing)
-                        self.writeHistory(Self.failedEntry(for: items[idx], profile: profile))
+                        self.writeHistory(Self.failedEntry(for: items[rawIdx], profile: profile))
                         continue
                     }
                     do {
                         tasks[idx].status = .saving
-                        AppLog.photo("Save started：\(items[idx].title)")
+                        AppLog.photo("Save started：\(items[rawIdx].title)")
                         let savedID = try await PhotoLibraryService.shared.saveVideo(at: outputURL)
-                        AppLog.photo("Save succeeded：\(items[idx].title) → \(savedID)")
+                        AppLog.photo("Save succeeded：\(items[rawIdx].title) → \(savedID)")
                         var final = result
                         final.savedPhotoLocalIdentifier = savedID
                         temp.remove(outputURL)
@@ -163,14 +178,14 @@ final class CompressionSession: ObservableObject {
                         self.writeHistory(final.historyEntry(savedID: savedID, outcome: "saved"))
 
                         // ---- 保存成功 → 原视频进入待删除队列（统一批量删除，绝不逐个删）----
-                        if let orig = items[idx].localIdentifier, !orig.isEmpty {
+                        if let orig = items[rawIdx].localIdentifier, !orig.isEmpty {
                             pendingDeleteIDs.append(orig)
                         }
                     } catch {
                         AppLog.photo("Save failed（原视频保留）：\(error.localizedDescription)")
                         temp.remove(outputURL)
                         tasks[idx].status = .failure((error as? AppError) ?? .saveToPhotoFailed(error.localizedDescription))
-                        self.writeHistory(Self.failedEntry(for: items[idx], profile: profile))
+                        self.writeHistory(Self.failedEntry(for: items[rawIdx], profile: profile))
                     }
                 } catch is CancellationError {
                     tasks[idx].status = .cancelled
@@ -180,12 +195,12 @@ final class CompressionSession: ObservableObject {
                     } else {
                         AppLog.compress("Task failed：\(e.errorDescription) - \(e.recoverySuggestion)")
                         tasks[idx].status = .failure(e)
-                        self.writeHistory(Self.failedEntry(for: items[idx], profile: profile))
+                        self.writeHistory(Self.failedEntry(for: items[rawIdx], profile: profile))
                     }
                 } catch {
                     AppLog.compress("Task failed（未知）：\(error.localizedDescription)")
                     tasks[idx].status = .failure(.unknown(error.localizedDescription))
-                    self.writeHistory(Self.failedEntry(for: items[idx], profile: profile))
+                    self.writeHistory(Self.failedEntry(for: items[rawIdx], profile: profile))
                 }
             }
 
@@ -199,7 +214,7 @@ final class CompressionSession: ObservableObject {
                 UIApplication.shared.endBackgroundTask(bgTaskID)
                 bgTaskID = .invalid
             }
-            AppLog.compress("Run finished：成功 \(successCount) / noGain \(noGainCount) / 失败 \(failureCount)，节省 \(Formatters.bytes(savedBytesSoFar))")
+            AppLog.compress("Run finished：成功 \(successCount) / noGain \(noGainCount) / 跳过 \(skippedCount) / 失败 \(failureCount)，节省 \(Formatters.bytes(savedBytesSoFar))")
         }
     }
 

@@ -23,13 +23,19 @@ struct HistoryEntry: Identifiable, Codable, Equatable {
     var originalAssetIdentifier: String?
     /// 原视频删除状态：notDeleted / deleted。
     var originalDeleteStatus: String
+    /// 压缩成品文件名（用于结果页展示）。
+    var compressedFilename: String?
+    /// 压缩成品时长（秒）；未知为 nil。
+    var compressedDuration: Double?
+    var originalDeleteStatus: String
     var outcome: String
 
     init(id: UUID, name: String, originalBytes: Int64, compressedBytes: Int64, savedBytes: Int64,
          date: Date, mode: String, sourceResolution: String, outputResolution: String,
          sourceCodec: String, outputCodec: String, durationSeconds: Double,
          savedAssetLocalIdentifier: String?, outcome: String = "saved",
-         originalAssetIdentifier: String? = nil, originalDeleteStatus: String = "notDeleted") {
+         originalAssetIdentifier: String? = nil, originalDeleteStatus: String = "notDeleted",
+         compressedFilename: String? = nil, compressedDuration: Double? = nil) {
         self.id = id
         self.name = name
         self.originalBytes = originalBytes
@@ -45,6 +51,8 @@ struct HistoryEntry: Identifiable, Codable, Equatable {
         self.savedAssetLocalIdentifier = savedAssetLocalIdentifier
         self.originalAssetIdentifier = originalAssetIdentifier
         self.originalDeleteStatus = originalDeleteStatus
+        self.compressedFilename = compressedFilename
+        self.compressedDuration = compressedDuration
         self.outcome = outcome
     }
 
@@ -53,6 +61,7 @@ struct HistoryEntry: Identifiable, Codable, Equatable {
         case sourceResolution, outputResolution, sourceCodec, outputCodec
         case durationSeconds, savedAssetLocalIdentifier
         case originalAssetIdentifier, originalDeleteStatus, outcome
+        case compressedFilename, compressedDuration
     }
 
     init(from decoder: Decoder) throws {
@@ -72,6 +81,8 @@ struct HistoryEntry: Identifiable, Codable, Equatable {
         savedAssetLocalIdentifier = try c.decodeIfPresent(String.self, forKey: .savedAssetLocalIdentifier)
         originalAssetIdentifier = try c.decodeIfPresent(String.self, forKey: .originalAssetIdentifier)
         originalDeleteStatus = try c.decodeIfPresent(String.self, forKey: .originalDeleteStatus) ?? "notDeleted"
+        compressedFilename = try c.decodeIfPresent(String.self, forKey: .compressedFilename)
+        compressedDuration = try c.decodeIfPresent(Double.self, forKey: .compressedDuration)
         outcome = try c.decodeIfPresent(String.self, forKey: .outcome) ?? "saved"
     }
 

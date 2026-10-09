@@ -10,21 +10,23 @@ import SwiftUI
 ///
 /// 底部 FloatingTabBar 由 ContentView 独立负责；HomeView 不承担全局导航职责。
 enum AppTab: String, CaseIterable {
-    case compress, history, settings
+    case compress, processed, history, settings
 
     var title: String {
         switch self {
-        case .compress: return "压缩"
-        case .history:  return "历史"
-        case .settings: return "设置"
+        case .compress:  return "压缩"
+        case .processed: return "已压"
+        case .history:   return "历史"
+        case .settings:  return "设置"
         }
     }
 
     var icon: String {
         switch self {
-        case .compress: return "arrow.down.circle.fill"
-        case .history:  return "clock.arrow.circlepath"
-        case .settings: return "gearshape.fill"
+        case .compress:  return "arrow.down.circle.fill"
+        case .processed: return "checkmark.seal.fill"
+        case .history:   return "clock.arrow.circlepath"
+        case .settings:  return "gearshape.fill"
         }
     }
 }
@@ -37,9 +39,10 @@ struct ContentView: View {
         ZStack(alignment: .bottom) {
             // 只渲染当前页面；压缩任务在 AppState.session 中继续，不受页面切换影响
             switch tab {
-            case .compress: HomeView()
-            case .history:  HistoryView()
-            case .settings: SettingsView()
+            case .compress:  HomeView()
+            case .processed: ProcessedView()
+            case .history:   HistoryView()
+            case .settings:  SettingsView()
             }
 
             FloatingTabBar(tab: $tab)

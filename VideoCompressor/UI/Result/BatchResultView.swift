@@ -3,6 +3,7 @@ import SwiftUI
 /// 批量结果列表（从完成总结点「查看结果」push 进入），点击行进入单条详情。
 /// 使用系统导航栏 + 系统返回，保证返回手势与返回按钮始终可用。
 struct BatchResultView: View {
+    @EnvironmentObject var history: HistoryStore
     let tasks: [CompressionTaskModel]
     var onContinue: (() -> Void)? = nil
 
@@ -43,12 +44,43 @@ struct BatchResultView: View {
         }
     }
 
+    /// 有有效压缩记录 → 进入独立结果详情页（对比 + 独立删除）；
+    /// 无记录（失败/跳过/无成品）→ 显示明确状态，不空白、不闪退。
     @ViewBuilder
     private func resultDetail(for task: CompressionTaskModel) -> some View {
-        if let r = task.status.result {
-            ResultDetailPage(result: r, status: task.status)
+        if let r = task.status.result,
+           let savedID = r.savedPhotoLocalIdentifier,
+           let entry = history.entries.first(where: { $0.savedAssetLocalIdentifier == savedID }) {
+            ResultDetailView(entryID: entry.id)
         } else {
-            failedDetail(task: task)
+            noResultDetail(task: task)
+        }
+    }
+
+    private func noResultDetail(_ task: CompressionTaskModel) -> some View {
+        VStack(spacing: 10) {
+            Image(systemName: "info.circle").font(.system(size: 32)).foregroundStyle(.secondary)
+            Text(task.item.title).font(.headline)
+            Text(statusMessage(task.status))
+                .font(.subheadline).foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 80)
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationTitle("结果")
+    }
+
+    private func statusMessage(_ status: TaskStatus) -> String {
+        switch status {
+        case .skipped: return "该视频被规则跳过，没有压缩结果"
+        case .cancelled: return "该视频已取消"
+        case .pending: return "该视频尚未处理"
+        case .compressing: return "该视频正在压缩"
+        case .saving: return "该视频正在保存"
+        case .noGain: return "压缩后未节省空间，没有保存结果（原视频已保留）"
+        case .failure(let e): return "压缩失败：\(e.errorDescription)"
+        default: return "暂无结果记录"
         }
     }
 

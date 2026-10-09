@@ -26,6 +26,37 @@ struct SettingsView: View {
                 } footer: {
                     Text("压缩后体积不小于原视频时，不会保存也不会删除原视频。")
                 }
+                Section {
+                    Toggle("自动跳过小视频", isOn: $settings.skipSmallVideosEnabled)
+                    if settings.skipSmallVideosEnabled {
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack {
+                                Text("小于该大小自动跳过").font(.subheadline)
+                                Spacer()
+                                Text("\(Int(settings.skipSmallVideosThresholdMB)) MB")
+                                    .font(.subheadline).foregroundStyle(.secondary)
+                            }
+                            Slider(value: $settings.skipSmallVideosThresholdMB,
+                                   in: 1...1024, step: 1)
+                            HStack {
+                                Text("常用：")
+                                    .font(.caption).foregroundStyle(.secondary)
+                                ForEach([10.0, 50.0, 100.0, 200.0], id: \.self) { v in
+                                    Button("\(Int(v))MB") { settings.skipSmallVideosThresholdMB = v }
+                                        .font(.caption)
+                                        .buttonStyle(PressableButtonStyle())
+                                        .foregroundStyle(settings.skipSmallVideosThresholdMB == v
+                                                         ? Color.accentColor : Color.secondary)
+                                }
+                            }
+                        }
+                        .padding(.top, 4)
+                    }
+                    Text("规则只作用于「一键压缩」的批量任务：文件大小严格小于阈值的视频记为已跳过（不压缩、不删原视频）；等于阈值照常压缩；大小未知的视频不会被跳过。手动单个选择不受影响。")
+                        .font(.caption).foregroundStyle(.secondary)
+                } header: {
+                    Text("一键压缩跳过规则")
+                }
                 Section("外观") {
                     Picker("主题", selection: $settings.appearance) {
                         ForEach(Appearance.allCases) { a in Text(a.displayName).tag(a) }

@@ -19,6 +19,12 @@ struct CompressionProgressView: View {
                     summaryView
                 }
             }
+            // 【修复】navigationDestination 必须挂在 NavigationStack 内的稳定节点上。
+            // 原先挂在 summaryView（if/else 条件分支内），任务结束分支切换时注册失效 →
+            // 「查看结果」点击无响应。
+            .navigationDestination(isPresented: $showDetails) {
+                BatchResultView(tasks: session.tasks, onContinue: onDone)
+            }
             .background(Color(.systemBackground))
             .toolbar(.hidden, for: .navigationBar)
             .alert(session.error?.errorDescription ?? "", isPresented: Binding(
@@ -141,6 +147,9 @@ struct CompressionProgressView: View {
 
             VStack(spacing: 8) {
                 countRow(text: "成功压缩 \(session.successCount) 个（已保存到照片）", color: .green)
+                if session.skippedCount > 0 {
+                    countRow(text: "已跳过 \(session.skippedCount) 个（规则排除，未压缩）", color: .secondary)
+                }
                 if session.noGainCount > 0 {
                     countRow(text: "未节省空间 \(session.noGainCount) 个（原视频已保留）", color: .orange)
                 }
@@ -198,6 +207,7 @@ struct CompressionProgressView: View {
 
             VStack(spacing: 12) {
                 Button {
+                    AppLog.ui("点击：查看结果")
                     showDetails = true
                 } label: {
                     Text("查看结果")
@@ -205,9 +215,10 @@ struct CompressionProgressView: View {
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 13)
+                        .background(Capsule().fill(Color.accentColor))
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(PressableButtonStyle())
-                .background(Capsule().fill(Color.accentColor))
 
                 Button {
                     onDone()
@@ -225,9 +236,6 @@ struct CompressionProgressView: View {
             .padding(.bottom, 30)
         }
         .frame(maxWidth: .infinity)
-        .navigationDestination(isPresented: $showDetails) {
-            BatchResultView(tasks: session.tasks, onContinue: onDone)
-        }
     }
 
     private func countRow(text: String, color: Color) -> some View {

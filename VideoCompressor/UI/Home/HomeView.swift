@@ -5,11 +5,16 @@ import Photos
 struct HomeView: View {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var temp: TempFileManager
+    @EnvironmentObject var history: HistoryStore
     @EnvironmentObject var settings: SettingsStore
     @StateObject private var scanner = PhotoScanner()
     @State private var showPicker = false
     @State private var showSettingsPage = false
     @State private var error: AppError?
+    @State private var showBatchPanel = false
+    @State private var batchPreparing: (done: Int, total: Int)? = nil
+    /// 通过「一键选择」加入的项（阈值规则只作用于这些）
+    @State private var batchSelectedIDs: Set<String> = []
     @State private var exportingIDs: Set<String> = []
 
     private var selected: [VideoItem] { appState.selectedVideos }
@@ -42,6 +47,23 @@ struct HomeView: View {
             }
             .scrollIndicators(.hidden)
             .toolbar(.hidden, for: .navigationBar)
+            .sheet(isPresented: $showBatchPanel) {
+                BatchSelectPanel(
+                    totalScanned: scanner.videos.count,
+                    thresholdEnabled: settings.skipSmallVideosEnabled,
+                    thresholdMB: settings.skipSmallVideosThresholdMB,
+                    skipEstimate: { n in
+                        let cands = Array(scanner.videos.prefix(n))
+                        guard settings.skipSmallVideosEnabled,
+                              let th = Int64(settings.skipSmallVideosThresholdMB * 1024 * 1024) else { return 0 }
+                        return cands.filter { v in
+                            guard let sz = v.fileSizeBytes, sz > 0 else { return false }
+                            return sz < th
+                        }.count
+                    },
+                    onApply: { count, all in applyBatchSelection(count: count, all: all) }
+                )
+            }
             .sheet(isPresented: $showPicker) {
                 VideoPicker(onPicked: { items in
                     appState.selectedVideos.append(contentsOf: items)
@@ -58,6 +80,7 @@ struct HomeView: View {
                 }
                 .environmentObject(temp)
                 .environmentObject(settings)
+                .environmentObject(history)
             }
         }
         .overlay(alignment: .bottom) {
@@ -113,14 +136,43 @@ struct HomeView: View {
     }
 
     private var pickerEntry: some View {
-        HStack {
-            GlassCapsuleButton(title: "刷新列表", systemImage: "arrow.clockwise") {
-                AppLog.ui("手动刷新相册扫描")
-                scanner.scan()
+        VStack(spacing: 10) {
+            HStack {
+                GlassCapsuleButton(title: "刷新列表", systemImage: "arrow.clockwise") {
+                    AppLog.ui("手动刷新相册扫描")
+                    scanner.scan()
+                }
+                Spacer()
+                GlassCapsuleButton(title: "一键选择", systemImage: "checkmark.circle") {
+                    AppLog.ui("打开一键选择面板")
+                    showBatchPanel = true
+                }
+                Spacer()
+                GlassCapsuleButton(title: "从文件选择", systemImage: "plus") {
+                    showPicker = true
+                }
             }
-            Spacer()
-            GlassCapsuleButton(title: "从文件选择", systemImage: "plus") {
-                showPicker = true
+            // 排序（默认大小从大到小）
+            HStack {
+                Text("共 \(scanner.videos.count) 个视频").font(.caption).foregroundStyle(.secondary)
+                Spacer()
+                Menu {
+                    ForEach(ScanSortMode.allCases) { m in
+                        Button {
+                            scanner.sortMode = m
+                        } label: {
+                            Text(m.displayName)
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.up.arrow.down").font(.caption)
+                        Text(scanner.sortMode.displayName).font(.caption)
+                    }
+                    .foregroundStyle(Color.accentColor)
+                    .padding(.horizontal, 10).padding(.vertical, 6)
+                    .background(Color(.secondarySystemBackground), in: Capsule())
+                }
             }
         }
     }
@@ -162,6 +214,13 @@ struct HomeView: View {
                     .font(.caption).foregroundStyle(.secondary)
                     .padding(.bottom, 6)
             }
+            if let p = batchPreparing {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("正在准备 \(p.done) / \(p.total)").font(.caption.weight(.medium))
+                    ProgressView(value: p.total > 0 ? Double(p.done) / Double(p.total) : 0)
+                }
+                .padding(.bottom, 8)
+            }
             if !selected.isEmpty {
                 Text("已选 \(selected.count) 个视频").font(.headline).padding(.bottom, 8)
             }
@@ -180,8 +239,9 @@ struct HomeView: View {
     }
 
     /// 勾选/取消一个扫描视频：勾选时先导出本地副本（流式，非整段载入内存），再进入压缩队列。
-    private func toggle(_ video: ScannedVideo) {
+    private func toggle(_ video: ScannedVideo, markAsBatch: Bool = false) {
         if let idx = selected.firstIndex(where: { $0.localIdentifier == video.id }) {
+            batchSelectedIDs.remove(selected[idx].id.uuidString)
             appState.selectedVideos.remove(at: idx)
             return
         }
@@ -198,7 +258,7 @@ struct HomeView: View {
                     sourceURL: url,
                     title: video.filename,
                     durationSeconds: meta?.durationSeconds ?? video.duration,
-                    fileSizeBytes: meta?.fileSizeBytes ?? video.fileSizeBytes,
+                    fileSizeBytes: meta?.fileSizeBytes ?? video.fileSizeBytes ?? 0,
                     width: meta?.width ?? video.pixelWidth,
                     height: meta?.height ?? video.pixelHeight,
                     fps: meta?.fps ?? 0,
@@ -206,6 +266,7 @@ struct HomeView: View {
                     thumbnailURL: thumbURL,
                     creationDate: nil
                 )
+                if markAsBatch { batchSelectedIDs.insert(item.id.uuidString) }
                 appState.selectedVideos.append(item)
                 AppLog.videoScan("已选择：\(video.filename)，\(Formatters.bytes(item.fileSizeBytes))")
             } catch {
@@ -307,11 +368,51 @@ struct HomeView: View {
         }
         guard !session.isRunning else { return }
 
+        // 阈值规则只作用于「一键选择」纳入的项；手动选择不受影响
+        let thresholdBytes = settings.skipSmallVideosEnabled
+            ? Int64(settings.skipSmallVideosThresholdMB * 1024 * 1024) : nil
+        if let th = thresholdBytes {
+            let batch = selected.filter { batchSelectedIDs.contains($0.id.uuidString) }
+            let (skipped, kept) = batch.partition { item -> Bool in
+                guard item.fileSizeBytes > 0 else { return false }   // 大小未知不跳过
+                return item.fileSizeBytes < th                        // 严格小于才跳过
+            }
+            if !skipped.isEmpty {
+                launchRun(items: kept + selected.filter { !batchSelectedIDs.contains($0.id.uuidString) },
+                          ruleSkipped: skipped)
+                return
+            }
+        }
         launchRun(items: selected)
     }
 
+    /// 一键选择：按当前排序取前 N 个（或全部）候选，逐个准备加入队列（显示真实进度）。
+    private func applyBatchSelection(count: Int?, all: Bool) {
+        let candidates = all ? scanner.videos : Array(scanner.videos.prefix(max(0, count ?? 0)))
+        let thresholdBytes = settings.skipSmallVideosEnabled
+            ? Int64(settings.skipSmallVideosThresholdMB * 1024 * 1024) : nil
+        let willSkip = candidates.filter { v in
+            guard let th = thresholdBytes, let sz = v.fileSizeBytes, sz > 0 else { return false }
+            return sz < th
+        }.count
+        let willCompress = candidates.count - willSkip
+        AppLog.ui("一键选择：候选 \(candidates.count)，预计跳过 \(willSkip)，准备压缩 \(willCompress)")
 
-    private func launchRun(items: [VideoItem]) {
+        batchPreparing = (0, candidates.count)
+        Task {
+            for (i, v) in candidates.enumerated() {
+                if selected.contains(where: { $0.localIdentifier == v.id }) { continue }
+                toggle(v, markAsBatch: true)
+                batchPreparing = (i + 1, candidates.count)
+                // 顺序准备，避免同时导出大量文件
+                try? await Task.sleep(nanoseconds: 30_000_000)
+            }
+            batchPreparing = nil
+        }
+    }
+
+
+    private func launchRun(items: [VideoItem], ruleSkipped: [VideoItem] = []) {
         guard !items.isEmpty else {
             error = .unknown("没有可压缩的视频")
             return
@@ -323,8 +424,8 @@ struct HomeView: View {
                 return
             }
         }
-        AppLog.compress("selectedVideos=\(items.count)，profile=\(profile.mode.displayName)")
-        session.run(items: items, profile: profile, settings: settings) { startError in
+        AppLog.compress("selectedVideos=\(items.count)，规则跳过 \(ruleSkipped.count)，profile=\(profile.mode.displayName)")
+        session.run(items: items, profile: profile, settings: settings, ruleSkipped: ruleSkipped) { startError in
             Task { @MainActor in error = startError }
         }
         appState.showProgressCover = true
@@ -359,7 +460,7 @@ struct ScanVideoRow: View {
                 }
                 VStack(alignment: .leading, spacing: 3) {
                     Text(video.filename).font(.subheadline.weight(.medium)).lineLimit(1)
-                    Text("\(Formatters.bytes(video.fileSizeBytes)) · \(Formatters.time(video.duration)) · \(video.resolutionText) · \(video.aspectText)")
+                    Text("\(video.fileSizeBytes.map { Formatters.bytes($0) } ?? "大小未知") · \(Formatters.time(video.duration)) · \(video.resolutionText) · \(video.aspectText)")
                         .font(.caption).foregroundStyle(.secondary)
                         .lineLimit(1)
                 }

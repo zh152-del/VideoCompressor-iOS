@@ -42,7 +42,9 @@ struct CompressionResult: Identifiable {
             durationSeconds: durationSeconds,
             savedAssetLocalIdentifier: savedID,
             outcome: outcome,
-            originalAssetIdentifier: item.localIdentifier   // 原视频 PHAsset 标识，供历史页安全删除
+            originalAssetIdentifier: item.localIdentifier,   // 原视频 PHAsset 标识，供历史页安全删除
+            compressedFilename: outputURL.lastPathComponent,
+            compressedDuration: durationSeconds
         )
     }
 }

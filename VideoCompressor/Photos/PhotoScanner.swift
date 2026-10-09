@@ -6,8 +6,10 @@ struct ScannedVideo: Identifiable {
     let id: String              // PHAsset.localIdentifier
     let asset: PHAsset
     let filename: String
-    let fileSizeBytes: Int64
+    /// 文件字节大小；无法确定时为 nil（UI 显示「大小未知」，绝不伪装 0 KB）。
+    let fileSizeBytes: Int64?
     let duration: Double
+    let creationDate: Date?
     let pixelWidth: Int
     let pixelHeight: Int
     /// PHAsset.pixelWidth/Height 已经按方向给出真实显示尺寸（竖屏视频=1080×1920 而非 1920×1080）。
@@ -40,6 +42,36 @@ final class PhotoScanner: ObservableObject {
 
     @Published var videos: [ScannedVideo] = []
     @Published var status: ScanStatus = .idle
+    /// 排序方式（默认按文件大小从大到小）。
+    @Published var sortMode: ScanSortMode = .sizeDesc { didSet { videos = Self.sorted(videos, by: sortMode) } }
+
+    /// 排序实现：大小未知的一律排最后（无论升降序）。
+    static func sorted(_ items: [ScannedVideo], by mode: ScanSortMode) -> [ScannedVideo] {
+        switch mode {
+        case .sizeDesc:
+            return items.sorted { a, b in
+                switch (a.fileSizeBytes, b.fileSizeBytes) {
+                case let (x?, y?): return x > y
+                case (nil, _?): return false
+                case (_?, nil): return true
+                default: return a.filename < b.filename
+                }
+            }
+        case .sizeAsc:
+            return items.sorted { a, b in
+                switch (a.fileSizeBytes, b.fileSizeBytes) {
+                case let (x?, y?): return x < y
+                case (nil, _?): return false
+                case (_?, nil): return true
+                default: return a.filename < b.filename
+                }
+            }
+        case .durationDesc:
+            return items.sorted { $0.duration > $1.duration }
+        case .dateDesc:
+            return items.sorted { ($0.creationDate ?? .distantPast) > ($1.creationDate ?? .distantPast) }
+        }
+    }
 
     /// 扫描用户允许访问的全部视频。
     /// 首次启动（未决定权限）时自动申请授权，授权完成后自动继续扫描。
@@ -77,8 +109,8 @@ final class PhotoScanner: ObservableObject {
             let asset = fetch.object(at: i)
             let resources = PHAssetResource.assetResources(for: asset)
             let videoResource = resources.first { $0.type == .video } ?? resources.first
-            // KVC 读取资源文件大小（不加载文件内容）
-            let size = (videoResource?.value(forKey: "fileSize") as? Int64) ?? 0
+            // 资源文件大小：读取不到则为 nil（未知），不伪装 0 KB
+            let size = (videoResource?.value(forKey: "fileSize") as? Int64)
             let filename = videoResource?.originalFilename ?? asset.value(forKey: "filename") as? String ?? "VIDEO_\(i)"
             items.append(ScannedVideo(
                 id: asset.localIdentifier,
@@ -86,12 +118,27 @@ final class PhotoScanner: ObservableObject {
                 filename: filename,
                 fileSizeBytes: size,
                 duration: asset.duration,
+                creationDate: asset.creationDate,
                 pixelWidth: asset.pixelWidth,
                 pixelHeight: asset.pixelHeight
             ))
         }
-        videos = items
+        videos = Self.sorted(items, by: sortMode)
         status = items.isEmpty ? .done(count: 0) : (auth == .limited ? .limited : .done(count: items.count))
         AppLog.videoScan("Asset Count=\(items.count)")
+    }
+}
+
+/// 首页排序方式。
+enum ScanSortMode: String, CaseIterable, Identifiable {
+    case sizeDesc, sizeAsc, durationDesc, dateDesc
+    var id: String { rawValue }
+    var displayName: String {
+        switch self {
+        case .sizeDesc:     return "大小：大 → 小"
+        case .sizeAsc:      return "大小：小 → 大"
+        case .durationDesc: return "时长：长 → 短"
+        case .dateDesc:     return "拍摄时间：新 → 旧"
+        }
     }
 }

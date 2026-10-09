@@ -81,6 +81,38 @@ final class HistoryStore: ObservableObject {
     /// 一键删除全部符合条件的原视频（一次 performChanges，系统只弹一次确认）。
     /// - Returns: 实际删除的数量。
     @discardableResult
+    /// 删除压缩成品（Photos 中已保存的输出视频）。
+    /// 只按 compressedAssetID 精确定位，绝不触碰原视频；历史记录保留（标记成品已删除）。
+    func deleteCompressed(entryID: UUID) async throws {
+        guard let entry = entries.first(where: { $0.id == entryID }) else { return }
+        guard let cid = entry.savedAssetLocalIdentifier, !cid.isEmpty else {
+            throw AppError.deleteOriginalFailed("该记录没有压缩成品标识")
+        }
+        AppLog.delete("Delete compressed started：\(entry.name)")
+        let result = await PhotoLibraryService.shared.deleteOriginals(localIdentifiers: [cid])
+        guard !result.deleted.isEmpty else {
+            throw AppError.deleteOriginalFailed("删除压缩成品未获确认，成品已保留")
+        }
+        if let idx = entries.firstIndex(where: { $0.id == entryID }) {
+            entries[idx].savedAssetLocalIdentifier = nil
+            entries[idx].compressedFilename = nil
+        }
+        save()
+        AppLog.delete("Delete compressed succeeded：\(entry.name)")
+    }
+
+    /// 压缩成品是否仍存在于 Photos（结果页如实显示，不伪造预览）。
+    func compressedAssetExists(_ entry: HistoryEntry) -> Bool {
+        guard let cid = entry.savedAssetLocalIdentifier, !cid.isEmpty else { return false }
+        return PHAsset.fetchAssets(withLocalIdentifiers: [cid], options: nil).count > 0
+    }
+
+    /// 原视频是否仍存在于 Photos。
+    func originalAssetExists(_ entry: HistoryEntry) -> Bool {
+        guard let oid = entry.originalAssetIdentifier, !oid.isEmpty else { return false }
+        return PHAsset.fetchAssets(withLocalIdentifiers: [oid], options: nil).count > 0
+    }
+
     func deleteAllOriginalVideos() async -> Int {
         let ids = deletableEntries.compactMap { $0.originalAssetIdentifier }
         guard !ids.isEmpty else { return 0 }
