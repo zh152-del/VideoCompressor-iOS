@@ -364,7 +364,7 @@ struct TranscodeEngine {
         // MARK: - 收尾（严格顺序：markAsFinished 已由泵执行 → finishWriting → 校验状态）
 
         // 收尾前诊断：把写入器/输入状态落盘，便于定位"卡在结束阶段"的真实原因
-        AppLog.stage("写入", "开始结束写入：writer.status=\(writer.status.rawValue)，video=\(videoInput.status.rawValue)，audio=\(audioInput?.status.rawValue ?? "无")")
+        AppLog.stage("写入", "开始结束写入：writer.status=\(writer.status.rawValue)，video ready=\(videoInput.isReadyForMoreMediaData)，audio ready=\(audioInput.map { $0.isReadyForMoreMediaData } ?? true)（writer.status=\(writer.status.rawValue)）")
         if isCancelled?() == true && writer.status == .writing {
             AppLog.stage("取消", "用户取消：取消写入器（不删除原视频）")
             writer.cancelWriting()
