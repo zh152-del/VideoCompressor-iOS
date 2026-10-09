@@ -39,6 +39,8 @@ final class CompressionService {
                   preferredCodec: VideoCodec = .hevc,
                   progress: ((Double) -> Void)? = nil) async throws -> CompressionResult {
         let cancelled: () -> Bool = { [weak self] in self?.isCancelled ?? true }
+        let tTaskStart = DispatchTime.now().uptimeNanoseconds
+        AppLog.perf("输入：\(Formatters.bytes(item.fileSizeBytes))，\(item.width)×\(item.height)，\(String(format: "%.1f", item.durationSeconds))s，\(item.codecDescription)")
 
         // ---- 前置判定：估算已无法有效压缩 → 跳过编码，直接 noGain ----
         let estimate = BitrateCalculator.estimateOutputBytes(

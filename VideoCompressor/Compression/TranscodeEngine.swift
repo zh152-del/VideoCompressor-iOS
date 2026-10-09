@@ -124,9 +124,15 @@ struct TranscodeEngine {
             throw AppError.exportFailed
         }
 
+        // 【性能】显式请求硬件加速（VideoToolbox）。系统不支持时自动回落到软件编码，
+        // 不会导致失败；真实使用的编码路径见性能日志。
+        let hwSupported = CodecSupport.hardwareEncodeSupported(options.codec)
+        AppLog.perf("硬件编码支持(\(options.codec.displayName))：\(hwSupported ? "可用" : "不可用→将使用软件编码")")
+
         let compressionProps: [String: Any] = [
             AVVideoAverageBitRateKey: bitrate,
-            AVVideoMaxKeyFrameIntervalKey: max(2, Int(fps) * 2)
+            AVVideoMaxKeyFrameIntervalKey: max(2, Int(fps) * 2),
+            AVVideoHardwareAccelerationKey: AVVideoHardwareAccelerationPreference.hardware
         ]
         let videoSettings: [String: Any] = [
             AVVideoCodecKey: options.codec.avCodecType,
@@ -193,6 +199,9 @@ struct TranscodeEngine {
 
         // MARK: - 启动
 
+        let tSetupDone = DispatchTime.now().uptimeNanoseconds
+        AppLog.perf("准备阶段耗时：\(Double(tSetupDone - t0) / 1e9) 秒")
+
         guard reader.startReading() else {
             AppLog.compress("[ERROR] reader.startReading 失败：\(reader.error?.localizedDescription ?? "未知")")
             throw AppError.videoReadFailed
@@ -206,17 +215,20 @@ struct TranscodeEngine {
 
         // MARK: - 采样泵（背压正确处理：等待重试同一样本，绝不丢失）
 
-        /// 等待 input ready（10ms 轮询，随时响应取消）。
+        /// 等待 input ready。【性能】1ms 起步指数退避（1→2→4→8→10ms 封顶），
+        /// 相比固定 10ms 轮询可显著减少编码快时的空等浪费。
         func waitForInput(_ input: AVAssetWriterInput) async -> Bool {
-            var spins = 0
+            var slept: UInt64 = 1_000_000      // 1ms
+            var waited: UInt64 = 0
             while !input.isReadyForMoreMediaData {
                 if isCancelled?() == true { return false }
-                spins += 1
-                if spins > 3000 {   // ~30s 仍未 ready：编码器异常，避免死循环
+                waited += slept
+                if waited > 30_000_000_000 {   // 30s 仍未 ready：编码器异常，避免死循环
                     AppLog.compress("[ERROR] input 超过 30s 未 ready，终止")
                     return false
                 }
-                try? await Task.sleep(nanoseconds: 10_000_000)
+                try? await Task.sleep(nanoseconds: slept)
+                slept = min(slept * 2, 10_000_000)
             }
             return true
         }
@@ -230,9 +242,13 @@ struct TranscodeEngine {
 
         var encodingError: Error?
 
-        let videoPump = Task {
+        // 【性能】采样泵放到后台执行器（Task {} 会继承 MainActor → 逐帧解码/append 挤在主线程，
+        // 与硬件编码争 CPU，是主要的吞吐瓶颈之一）。detached 不继承 actor。
+        let videoPump = Task.detached {
             var lastEmitted: CMTime = .invalid
             var emitted = 0
+            var lastReportedFrac: Double = 0
+            var lastReportUptime: UInt64 = DispatchTime.now().uptimeNanoseconds
             while true {
                 if isCancelled?() == true { break }
                 guard let sample = videoOutput.copyNextSampleBuffer() else { break }  // 正常结束
@@ -249,8 +265,13 @@ struct TranscodeEngine {
                 if videoInput.append(sample) {
                     lastEmitted = pts
                     emitted += 1
-                    if duration > 0 {
-                        progress?(min(max(CMTimeGetSeconds(pts) / duration, 0), 1))
+                    // 【性能】进度节流：最多每 100ms / 每 1% 上报一次（原为逐帧 → 单条 60s 视频约 1800 次主线程回调）
+                    let frac = duration > 0 ? min(max(CMTimeGetSeconds(pts) / duration, 0), 1) : 0
+                    let nowUptime = DispatchTime.now().uptimeNanoseconds
+                    if frac - lastReportedFrac >= 0.01 || nowUptime - lastReportUptime >= 100_000_000 {
+                        lastReportedFrac = frac
+                        lastReportUptime = nowUptime
+                        progress?(frac)
                     }
                 } else {
                     AppLog.compress("[ERROR] video append 失败（writer 状态：\(writer.status.rawValue)）：\(writer.error?.localizedDescription ?? "无")")
@@ -262,7 +283,7 @@ struct TranscodeEngine {
             AppLog.compress("视频泵结束：已写入 \(emitted) 帧")
         }
 
-        let audioPump = Task {
+        let audioPump = Task.detached {
             guard let audioInput = audioInput, let audioOutput = audioOutput else { return }
             var appended = 0
             while true {
@@ -283,6 +304,9 @@ struct TranscodeEngine {
 
         await videoPump.value
         await audioPump.value
+        let tEncodeDone = DispatchTime.now().uptimeNanoseconds
+        let encodeSeconds = Double(tEncodeDone - tSetupDone) / 1e9
+        AppLog.perf("编码阶段耗时：\(String(format: "%.2f", encodeSeconds)) 秒；压缩倍率(时长/编码耗时)：\(String(format: "%.1f", duration > 0 ? duration / max(encodeSeconds, 0.001) : 0))×实时")
 
         // MARK: - 收尾（严格顺序：markAsFinished 已由泵执行 → finishWriting → 校验状态）
 

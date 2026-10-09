@@ -169,8 +169,11 @@ final class CompressionSession: ObservableObject {
                     do {
                         tasks[idx].status = .saving
                         AppLog.photo("Save started：\(items[rawIdx].title)")
+                        let tSaveStart = DispatchTime.now().uptimeNanoseconds
                         let savedID = try await PhotoLibraryService.shared.saveVideo(at: outputURL)
+                        let tSaveDone = DispatchTime.now().uptimeNanoseconds
                         AppLog.photo("Save succeeded：\(items[rawIdx].title) → \(savedID)")
+                        AppLog.perf("Photos保存+确认耗时：\(String(format: "%.2f", Double(tSaveDone - tSaveStart) / 1e9)) 秒")
                         var final = result
                         final.savedPhotoLocalIdentifier = savedID
                         temp.remove(outputURL)

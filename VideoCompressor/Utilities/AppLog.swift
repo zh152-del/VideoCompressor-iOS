@@ -12,6 +12,7 @@ enum AppLog {
     static func delete(_ msg: String) { logger.log("[DELETE] \(msg, privacy: .public)") }
     static func history(_ msg: String) { logger.log("[HISTORY] \(msg, privacy: .public)") }
     static func ui(_ msg: String) { logger.log("[UI] \(msg, privacy: .public)") }
+    static func perf(_ msg: String) { logger.log("[Perf] \(msg, privacy: .public)") }
     static func videoScan(_ msg: String) { logger.log("[VideoScan] \(msg, privacy: .public)") }
     static func mark(_ msg: String) { logger.log("[Mark] \(msg, privacy: .public)") }
     static func thumbnail(_ msg: String) { logger.log("[Thumbnail] \(msg, privacy: .public)") }
