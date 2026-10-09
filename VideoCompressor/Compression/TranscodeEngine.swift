@@ -30,6 +30,7 @@ struct TranscodeEngine {
                           progress: ((Double) -> Void)? = nil,
                           isCancelled: (() -> Bool)? = nil) async throws {
         AppLog.compress("Encoding start → \(outputURL.lastPathComponent)")
+        let t0 = DispatchTime.now().uptimeNanoseconds
         try? FileManager.default.removeItem(at: outputURL)
         // 确保输出父目录存在，否则 AVAssetWriter 初始化会失败
         do {
@@ -124,15 +125,15 @@ struct TranscodeEngine {
             throw AppError.exportFailed
         }
 
-        // 【性能】显式请求硬件加速（VideoToolbox）。系统不支持时自动回落到软件编码，
-        // 不会导致失败；真实使用的编码路径见性能日志。
-        let hwSupported = CodecSupport.hardwareEncodeSupported(options.codec)
-        AppLog.perf("硬件编码支持(\(options.codec.displayName))：\(hwSupported ? "可用" : "不可用→将使用软件编码")")
+        // 【性能】显式请求硬件编码：EnableHardwareAcceleratedVideoEncoder=true 表示
+        // "优先使用硬件编码器"；设备/分辨率/码率不满足硬件条件时系统自动回落到软件编码，
+        // 不会失败。iOS 不公开"本次会话实际用了哪个编码器"的 API，因此只如实记录请求与回落策略。
+        AppLog.perf("编码器请求：\(options.codec.displayName) + 硬件加速优先(EnableHardwareAcceleratedVideoEncoder=true)，不支持时自动回落软件")
 
         let compressionProps: [String: Any] = [
             AVVideoAverageBitRateKey: bitrate,
             AVVideoMaxKeyFrameIntervalKey: max(2, Int(fps) * 2),
-            AVVideoHardwareAccelerationKey: AVVideoHardwareAccelerationPreference.hardware
+            "EnableHardwareAcceleratedVideoEncoder": true
         ]
         let videoSettings: [String: Any] = [
             AVVideoCodecKey: options.codec.avCodecType,
