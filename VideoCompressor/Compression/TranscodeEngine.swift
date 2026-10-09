@@ -197,22 +197,47 @@ struct TranscodeEngine {
                 AVLinearPCMIsFloatKey: false,
                 AVLinearPCMIsBigEndianKey: false
             ]
-            let ao = AVAssetReaderTrackOutput(track: audioTrack, outputSettings: pcmSettings)
-            if reader.canAdd(ao) {
-                let audioSettings: [String: Any] = [
-                    AVFormatIDKey: kAudioFormatMPEG4AAC,
-                    AVSampleRateKey: 44100,
-                    AVNumberOfChannelsKey: 2,
-                    AVEncoderBitRateKey: 128000
-                ]
-                let ai = AVAssetWriterInput(mediaType: .audio, outputSettings: audioSettings)
-                ai.expectsMediaDataInRealTime = false
-                if writer.canAdd(ai) {
-                    writer.add(ai)
-                    audioInput = ai
-                    reader.add(ao)
-                    audioOutput = ao
-                    AppLog.compress("音频链路：PCM 解压 → AAC 编码")
+            // 【卡死修复】音画时长严重不匹配的视频，音轨数据会让写入器在 finishWriting 阶段
+            // 长时间阻塞（日志实证：任务卡在"等待写入器完成"）。这类视频直接跳过音轨，只压画面。
+            let audioDuration = (try? await audioTrack.load(.timeRange))?.duration.seconds ?? 0
+            let durationMismatch = audioDuration > 0 && duration > 0
+                && (audioDuration > duration * 1.5 || audioDuration < duration * 0.2)
+            if durationMismatch {
+                AppLog.compress("[警告] 音画时长不匹配（音频 \(String(format: "%.2f", audioDuration))s / 视频 \(String(format: "%.2f", duration))s），跳过音轨以避免写入器结束阶段卡死")
+                AppLog.failure("音频", "音频轨道", "音画时长不匹配，已跳过音轨（画面照常压缩）")
+            } else {
+                let ao = AVAssetReaderTrackOutput(track: audioTrack, outputSettings: pcmSettings)
+                if reader.canAdd(ao) {
+                    // 【兼容】使用源音频真实采样率/声道（AAC 编码器要求合法值），避免硬编码 44100/2 导致编码器异常
+                    var srcRate = 44100.0
+                    var srcChannels = 2
+                    if let fd = try? await audioTrack.load(.formatDescriptions).first,
+                       let desc = CMAudioFormatDescriptionGetStreamBasicDescription(fd) {
+                        if desc.mSampleRate > 0 { srcRate = desc.mSampleRate }
+                        if desc.mChannelsPerFrame > 0 { srcChannels = Int(desc.mChannelsPerFrame) }
+                    }
+                    let legal: [Double] = [8000, 11025, 12000, 16000, 22050, 24000, 32000, 44100, 48000]
+                    let targetRate = legal.min(by: { abs($0 - srcRate) < abs($1 - srcRate) }) ?? 44100
+                    let targetChannels = min(max(srcChannels, 1), 2)
+                    let audioSettings: [String: Any] = [
+                        AVFormatIDKey: kAudioFormatMPEG4AAC,
+                        AVSampleRateKey: targetRate,
+                        AVNumberOfChannelsKey: targetChannels,
+                        AVEncoderBitRateKey: 128000
+                    ]
+                    let ai = AVAssetWriterInput(mediaType: .audio, outputSettings: audioSettings)
+                    ai.expectsMediaDataInRealTime = false
+                    if writer.canAdd(ai) {
+                        writer.add(ai)
+                        audioInput = ai
+                        reader.add(ao)
+                        audioOutput = ao
+                        AppLog.compress("音频链路：PCM 解压 → AAC 编码（\(Int(targetRate))Hz / \(targetChannels)ch，源 \(Int(srcRate))Hz / \(srcChannels)ch）")
+                    } else {
+                        AppLog.compress("[警告] writer 拒绝音频输入，仅压缩画面")
+                    }
+                } else {
+                    AppLog.compress("[警告] reader 拒绝音频输出，仅压缩画面")
                 }
             }
         }
@@ -303,7 +328,14 @@ struct TranscodeEngine {
         }
 
         let audioPump = Task.detached {
-            guard let audioInput = audioInput, let audioOutput = audioOutput else { return }
+            // 【卡死修复】即使没有音频输出，也必须让 writer 的音频输入进入"结束"状态，
+            // 否则 finishWriting 会永远等待音频输入而卡住（此前的真实卡死原因之一）。
+            guard let audioInput = audioInput else { return }
+            defer { audioInput.markAsFinished() }
+            guard let audioOutput = audioOutput else {
+                AppLog.compress("[警告] 无音频输出，音频输入直接标记结束")
+                return
+            }
             var appended = 0
             while true {
                 if isCancelled?() == true { break }
@@ -317,7 +349,6 @@ struct TranscodeEngine {
                     break
                 }
             }
-            audioInput.markAsFinished()
             AppLog.compress("音频泵结束：已写入 \(appended) 帧")
         }
 
@@ -331,10 +362,14 @@ struct TranscodeEngine {
 
         // MARK: - 收尾（严格顺序：markAsFinished 已由泵执行 → finishWriting → 校验状态）
 
+        // 收尾前诊断：把写入器/输入状态落盘，便于定位"卡在结束阶段"的真实原因
+        AppLog.stage("写入", "开始结束写入：writer.status=\(writer.status.rawValue)，video finished=\(videoInput.isFinished)，audio finished=\(audioInput.map { $0.isFinished } ?? true(nil))")
         if isCancelled?() == true && writer.status == .writing {
+            AppLog.stage("取消", "用户取消：取消写入器（不删除原视频）")
             writer.cancelWriting()
         }
         await writer.finishWriting()
+        AppLog.stage("写入", "写入器已结束：status=\(writer.status.rawValue)，error=\(writer.error?.localizedDescription ?? "无")")
 
         if isCancelled?() == true {
             // 取消收尾：只删除本次任务的临时输出，绝不触碰原视频或已保存成品

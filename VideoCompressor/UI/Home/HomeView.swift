@@ -306,17 +306,15 @@ struct HomeView: View {
         }
         let totalOriginal = selected.reduce(Int64(0)) { $0 + $1.fileSizeBytes }
         let totalEstimate = estimates.reduce(Int64(0), +)
-        let uncompressible = selected.count - estimates.count
 
         if selected.count == 1, let est = estimates.first, let orig = selected.first?.fileSizeBytes {
             return "预计约 \(Formatters.bytes(est))（原 \(Formatters.bytes(orig))，以编码结果为准）"
         }
+        // 说明：估算仅供参考，不再据此跳过任何视频；能否压缩以真实编码结果为准。
         if totalEstimate < totalOriginal {
-            var text = "预计节省约 \(Formatters.bytes(totalOriginal - totalEstimate))（估算值）"
-            if uncompressible > 0 { text += " · \(uncompressible) 个可能无法压缩" }
-            return text
+            return "预计节省约 \(Formatters.bytes(totalOriginal - totalEstimate))（估算值，以实际结果为准）"
         }
-        return "所选视频码率已较低，可能无法再压缩"
+        return "所选视频码率已较低，实际能压缩多少以编码结果为准"
     }
 
     // MARK: - 底部操作区
@@ -338,11 +336,6 @@ struct HomeView: View {
                 Spacer()
                 Text(estimateText).font(.caption).foregroundStyle(.secondary).lineLimit(1)
             }
-            if uncompressibleCount > 0 {
-                Text("其中 \(uncompressibleCount) 个可能无法压缩，将自动跳过")
-                    .font(.caption).foregroundStyle(.orange)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
             Button {
                 startCompression()
             } label: {
@@ -361,30 +354,7 @@ struct HomeView: View {
         .floatSurface(cornerRadius: 22)
     }
 
-    /// 预分析：判断该视频"可能无法压缩"。
-    ///
-    /// 判定口径（修复 900/1000 误判）：
-    /// - 文件大小未知 / 时长异常 / 估算失败 → **一律放行**，交给真实编码尝试。
-    ///   （旧实现把这些一律判为"无法压缩"，导致扫描到的视频几乎全被误杀）
-    /// - 只有估算输出明确 ≥ 原体积 92% 时，才判为"可能无法压缩"（与压缩器 noGain 判定同口径）。
-    /// - fps 未知时按 30fps 估算，避免估算偏差。
-    private func isUncompressible(_ item: VideoItem) -> Bool {
-        guard item.fileSizeBytes > 0, item.durationSeconds > 0.2 else { return false }
-        let fps = item.fps > 0 ? item.fps : 30
-        guard let est = BitrateCalculator.estimateOutputBytes(
-                fileSizeBytes: item.fileSizeBytes,
-                durationSeconds: item.durationSeconds,
-                height: item.height, fps: fps,
-                mode: profile.mode, custom: profile.custom) else {
-            return false   // 估算失败不判死刑
-        }
-        return Double(est) >= Double(item.fileSizeBytes) * 0.92
-    }
 
-    /// 当前选择中"可能无法压缩"的视频数量（底部实时提示用）。
-    private var uncompressibleCount: Int {
-        selected.filter { isUncompressible($0) }.count
-    }
 
     private func startCompression() {
         AppLog.ui("Start compression tapped，已选 \(selected.count) 个")
@@ -397,28 +367,6 @@ struct HomeView: View {
             return
         }
         guard !session.isRunning else { return }
-
-        // ---- 预分析：自动跳过"可能无法压缩"的视频（不执行任何操作）----
-        let uncompressible = selected.filter { isUncompressible($0) }
-        if uncompressible.count == selected.count, !selected.isEmpty {
-            // 只选了一个（或全部）无法压缩的视频 → 明确提示
-            AppLog.ui("预分析：\(uncompressible.count)/\(selected.count) 个视频可能无法压缩")
-            error = .unknown("当前视频无法压缩")
-            // 记录到历史（可在历史/已压中查看原因），不做永久排除
-            for item in uncompressible {
-                session.writeHistory(CompressionSession.skippedEntry(for: item))
-            }
-            return
-        }
-        if !uncompressible.isEmpty {
-            AppLog.ui("预分析：自动跳过 \(uncompressible.count) 个可能无法压缩的视频")
-            for item in uncompressible {
-                session.writeHistory(CompressionSession.skippedEntry(for: item))
-            }
-            let keep = selected.filter { item in !uncompressible.contains(where: { $0.id == item.id }) }
-            launchRun(items: keep, ruleSkipped: uncompressible)
-            return
-        }
 
         // 阈值规则只作用于「一键选择」纳入的项；手动选择不受影响
         let thresholdBytes = settings.skipSmallVideosEnabled
