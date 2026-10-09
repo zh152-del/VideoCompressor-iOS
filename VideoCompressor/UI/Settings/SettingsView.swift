@@ -84,7 +84,7 @@ struct SettingsView: View {
                 } header: {
                     Text("已跳过视频（\(session.timedOutSkips.count)）")
                 } footer: {
-                    Text("被判定"可能无法压缩"的视频会在开始压缩前自动跳过，不会执行任何操作，也不会再出现在首页扫描列表中。清空记录后可重新参与。")
+                    Text("被判定为可能无法压缩的视频会在开始压缩前自动跳过，不会执行任何操作，也不会再出现在首页扫描列表中。清空记录后可重新参与。")
                 }
                 Section("外观") {
                     Picker("主题", selection: $settings.appearance) {

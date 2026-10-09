@@ -413,9 +413,8 @@ struct HomeView: View {
                     session.markUncompressibleSkip(assetID: pid, name: item.title, sizeBytes: item.fileSizeBytes)
                 }
             }
-            let keep = selected.filter { !uncompressible.contains($0) }
-            launchRun(items: keep + selected.filter { !selected.contains(where: { uncompressible.contains($0) }) },
-                      ruleSkipped: uncompressible)
+            let keep = selected.filter { item in !uncompressible.contains(where: { $0.id == item.id }) }
+            launchRun(items: keep, ruleSkipped: uncompressible)
             return
         }
 
