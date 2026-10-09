@@ -237,6 +237,20 @@ final class CompressionSession: ObservableObject {
                 do {
                     let result = try await service.compress(item: items[rawIdx], profile: profile,
                                                             preferredCodec: settings.preferredCodec,
+                                                            progress: { [weak self] p in
+                        Task { @MainActor in
+                            guard let self, idx < self.tasks.count, self.currentRunID == runID else { return }
+                            if self.isCancelling { return }
+                            if p < 0 {
+                                self.tasks[idx].status = .finalizing
+                                self.log("结束编码", "任务\(taskNo) 样本写完，等待写入器完成", taskIndex: taskNo)
+                            } else {
+                                self.tasks[idx].status = .compressing(progress: p)
+                                let total = max(self.tasks.count, 1)
+                                self.overallProgress = min(1.0, (Double(idx) + p) / Double(total))
+                            }
+                        }
+                    },
                                                             signal: signal,
                                                             onState: { st in
                         Task { @MainActor in
@@ -250,24 +264,6 @@ final class CompressionSession: ObservableObject {
                             case .cancelled:
                                 self.log("取消", "引擎已取消并清理临时输出", taskIndex: taskNo)
                             default: break
-                            }
-                        }
-                    },
-                                                            progress: { [weak self] p in
-                        Task { @MainActor in
-                            guard let self else { return }
-                            // 【稳定性】迟到回调隔离：旧任务/取消后不得再改动状态
-                            guard let self, idx < self.tasks.count, self.currentRunID == runID else { return }
-                            if self.isCancelling { return }
-                            if p < 0 {
-                                // 编码帧写完，进入写盘收尾阶段
-                                self.tasks[idx].status = .finalizing
-                                self.log("结束编码", "任务\(taskNo) 样本写完，等待写入器完成", taskIndex: taskNo)
-                            } else {
-                                self.tasks[idx].status = .compressing(progress: p)
-                                // 【稳定性】总体进度 = 已完成任务 + 当前任务帧进度
-                                let total = max(self.tasks.count, 1)
-                                self.overallProgress = min(1.0, (Double(idx) + p) / Double(total))
                             }
                         }
                     }
