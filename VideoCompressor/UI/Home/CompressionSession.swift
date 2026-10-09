@@ -563,7 +563,7 @@ final class CompressionSession: ObservableObject {
                 if let idx = self.indexOfTaskNo(taskNo) {
                     let item = self.tasks[idx].item
                     self.tasks[idx].status = .skipped
-                    if let pid = item.phAssetID ?? item.localIdentifier {
+                    if let pid = item.localIdentifier, !pid.isEmpty {
                         self.markTimedOutSkip(assetID: pid, name: item.title, sizeBytes: item.fileSizeBytes)
                     }
                 }
