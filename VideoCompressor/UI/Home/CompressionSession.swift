@@ -266,7 +266,7 @@ final class CompressionSession: ObservableObject {
                             default: break
                             }
                         }
-                    }
+                    })
 
                     if result.noGain {
                         AppLog.compress("No gain：\(items[rawIdx].title)（\(Formatters.bytes(result.outputSizeBytes)) ≥ 原 \(Formatters.bytes(items[rawIdx].fileSizeBytes))），保留原视频")
