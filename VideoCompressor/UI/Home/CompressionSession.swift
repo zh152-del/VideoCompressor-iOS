@@ -237,6 +237,7 @@ final class CompressionSession: ObservableObject {
                 do {
                     let result = try await service.compress(item: items[rawIdx], profile: profile,
                                                             preferredCodec: settings.preferredCodec,
+                                                            progress: nil,
                                                             signal: signal,
                                                             onState: { st in
                         Task { @MainActor in

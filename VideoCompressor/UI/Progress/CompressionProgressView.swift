@@ -105,9 +105,9 @@ struct CompressionProgressView: View {
                 .padding(.horizontal, 30)
                 .padding(.top, 2)
             HStack {
-                Text("本任务耗时 \(Formatters.time(Int(session.currentTaskElapsed)))")
+                Text("本任务耗时 \(Formatters.time(session.currentTaskElapsed))")
                 Spacer()
-                Text("批次耗时 \(Formatters.time(Int(session.batchElapsed)))")
+                Text("批次耗时 \(Formatters.time(session.batchElapsed))")
             }
             .font(.caption2).foregroundStyle(.tertiary)
             .padding(.horizontal, 30)
@@ -233,7 +233,7 @@ struct CompressionProgressView: View {
                 }
                 .frame(height: 150)
                 .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                .onChange(of: session.liveLog.count) { _, _ in
+                .onChange(of: session.liveLog.count) { _ in
                     // 仅在用户未手动上划时自动滚到底
                     if !userScrolledUp, let last = session.liveLog.last {
                         withAnimation(.easeOut(duration: 0.15)) { proxy.scrollTo(last.id, anchor: .bottom) }
