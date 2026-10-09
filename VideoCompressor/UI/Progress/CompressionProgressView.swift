@@ -105,17 +105,19 @@ struct CompressionProgressView: View {
 
             Spacer()
 
+            // 【稳定性】取消：点击后立即禁用并显示"正在取消…"，防重复点击/重复清理
             Button(role: .destructive) {
                 session.cancel()
             } label: {
-                Text("取消")
+                Text(session.isCancelling ? "正在取消…" : "取消")
                     .font(.body.weight(.medium))
-                    .foregroundStyle(.red)
+                    .foregroundStyle(session.isCancelling ? Color.secondary : Color.red)
                     .padding(.horizontal, 36)
                     .padding(.vertical, 12)
                     .background(Capsule().fill(Color(.secondarySystemBackground)))
             }
             .buttonStyle(PressableButtonStyle())
+            .disabled(session.isCancelling)
             .padding(.bottom, 30)
         }
         .frame(maxWidth: .infinity)
@@ -126,6 +128,12 @@ struct CompressionProgressView: View {
         switch task.status {
         case .compressing(let p):
             return "\(Formatters.bytes(task.item.fileSizeBytes)) → 编码中… \(Formatters.percent(p))"
+        case .finalizing:
+            return "编码已写完，正在完成编码与写入文件…"
+        case .validating:
+            return "正在验证输出文件…"
+        case .skipped:
+            return "已按规则跳过"
         case .saving:
             return "编码完成，验证输出并保存到照片…"
         default:
@@ -206,19 +214,21 @@ struct CompressionProgressView: View {
             Spacer()
 
             VStack(spacing: 12) {
-                Button {
-                    AppLog.ui("点击：查看结果")
-                    showDetails = true
-                } label: {
-                    Text("查看结果")
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 13)
-                        .background(Capsule().fill(Color.accentColor))
-                        .contentShape(Rectangle())
+                if session.successCount > 0 {
+                    Button {
+                        AppLog.ui("点击：查看结果")
+                        showDetails = true
+                    } label: {
+                        Text("查看结果")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 13)
+                            .background(Capsule().fill(Color.accentColor))
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(PressableButtonStyle())
                 }
-                .buttonStyle(PressableButtonStyle())
 
                 Button {
                     onDone()
@@ -315,6 +325,10 @@ struct TaskResultRow: View {
             Text(e.errorDescription).foregroundStyle(.red)
         case .skipped:
             Text("已跳过（规则排除）").foregroundStyle(.secondary)
+        case .finalizing:
+            Text("正在完成编码与写入…").foregroundStyle(.secondary)
+        case .validating:
+            Text("正在验证输出…").foregroundStyle(.secondary)
         case .saving:
             Text("保存到照片…").foregroundStyle(.secondary)
         case .cancelled:

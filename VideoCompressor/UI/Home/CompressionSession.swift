@@ -88,7 +88,8 @@ final class CompressionSession: ObservableObject {
              settings: SettingsStore,
              ruleSkipped: [VideoItem] = [],
              onStartError: ((AppError) -> Void)? = nil) {
-        guard !items.isEmpty else {
+        // 注意：items 为空但存在规则跳过项时仍需启动（否则进度页会停在空汇总，看起来"卡死"）
+        guard !items.isEmpty || !ruleSkipped.isEmpty else {
             onStartError?(.unknown("尚未选择视频"))
             return
         }
@@ -107,6 +108,9 @@ final class CompressionSession: ObservableObject {
         phase = .preparing
         overallProgress = 0
         error = nil
+        isCancelling = false
+        let runID = UUID()
+        currentRunID = runID
         pendingDeleteIDs = []
         deletedOriginalIDs = []
         // 规则跳过项排在前面并直接置为 .skipped（不进入编码循环）
@@ -120,6 +124,8 @@ final class CompressionSession: ObservableObject {
             AppLog.compress("规则跳过（不编码、不删原视频）：\(m.item.title)")
         }
         service.resetCancellation()
+        let runStart = DispatchTime.now()
+        AppLog.compress("[Task \(runID.uuidString.prefix(8))] 开始：压缩\(items.count) 个，规则跳过\(ruleSkipped.count) 个")
         AppLog.compress("Run started：\(items.count) 个视频，模式：\(profile.mode.displayName)")
 
         // 后台任务包裹（在 MainActor 上调用 UIApplication，保证线程安全；begin/end 严格成对）
@@ -139,17 +145,28 @@ final class CompressionSession: ObservableObject {
             let offset = ruleSkipped.count   // 前 offset 个任务是规则跳过项
             for rawIdx in items.indices {
                 let idx = rawIdx + offset
-                if Task.isCancelled || service.isCancelledFlag { break }
+                if service.isCancelledFlag { break }   // 协作式取消（不再强制取消 Task）
                 tasks[idx].status = .compressing(progress: 0)
-                overallProgress = Double(rawIdx) / Double(items.count)
-                AppLog.compress("Task started [\(idx + 1)/\(tasks.count)]：\(items[rawIdx].title)，原始 \(Formatters.bytes(items[rawIdx].fileSizeBytes))")
+                overallProgress = Double(rawIdx) / Double(items.count)   // 起点：已完成任务占比
+                let itemStart = DispatchTime.now()
+                AppLog.compress("[Task \(runID.uuidString.prefix(8))] 任务\(idx + 1)/\(tasks.count) 开始：\(items[rawIdx].title)，\(Formatters.bytes(items[rawIdx].fileSizeBytes))")
 
                 do {
                     let result = try await service.compress(item: items[rawIdx], profile: profile,
                                                             preferredCodec: settings.preferredCodec) { [weak self] p in
                         Task { @MainActor in
-                            guard let self, idx < self.tasks.count else { return }
-                            self.tasks[idx].status = .compressing(progress: p)
+                            // 【稳定性】迟到回调隔离：旧任务/取消后不得再改动状态
+                            guard let self, idx < self.tasks.count, self.currentRunID == runID else { return }
+                            if self.isCancelling { return }
+                            if p < 0 {
+                                // 编码帧写完，进入写盘收尾阶段
+                                self.tasks[idx].status = .finalizing
+                            } else {
+                                self.tasks[idx].status = .compressing(progress: p)
+                                // 【稳定性】总体进度 = 已完成任务 + 当前任务帧进度
+                                let total = max(self.tasks.count, 1)
+                                self.overallProgress = min(1.0, (Double(idx) + p) / Double(total))
+                            }
                         }
                     }
 
@@ -167,7 +184,16 @@ final class CompressionSession: ObservableObject {
                         continue
                     }
                     do {
+                        AppLog.compress("[Task \(runID.uuidString.prefix(8))] 编码结束→写入完成，开始验证输出（\(String(format: "%.1f", Double(DispatchTime.now().uptimeNanoseconds - itemStart.uptimeNanoseconds) / 1e9))s）")
+                        tasks[idx].status = .validating
+                        try? await Task.sleep(nanoseconds: 1)   // 让 UI 观察到验证阶段
+                        guard !service.isCancelledFlag else {
+                            tasks[idx].status = .cancelled
+                            temp.remove(outputURL)
+                            continue
+                        }
                         tasks[idx].status = .saving
+                        AppLog.compress("[Task \(runID.uuidString.prefix(8))] 验证通过，开始保存 Photos")
                         AppLog.photo("Save started：\(items[rawIdx].title)")
                         let savedID = try await PhotoLibraryService.shared.saveVideo(at: outputURL)
                         AppLog.photo("Save succeeded：\(items[rawIdx].title) → \(savedID)")
@@ -205,11 +231,16 @@ final class CompressionSession: ObservableObject {
             }
 
             overallProgress = 1.0
+            AppLog.compress("[Task \(runID.uuidString.prefix(8))] 全部结束：成功\(successCount) 跳过\(skippedCount) 失败\(failureCount)，总耗时\(String(format: "%.1f", Double(DispatchTime.now().uptimeNanoseconds - runStart.uptimeNanoseconds) / 1e9))s")
             // 自动删除模式：批次结束后一次性批量删除（只含保存成功的原视频）
             if settings.deleteOriginalAfterSave, !pendingDeleteIDs.isEmpty {
                 await deletePendingOriginals()
             }
             phase = service.isCancelledFlag ? .cancelled : .completed
+            isCancelling = false   // 终态后复位，避免 UI 永久显示"正在取消"
+            if service.isCancelledFlag {
+                AppLog.compress("[Task \(runID.uuidString.prefix(8))] 取消已生效：临时输出已清理，原视频未触碰")
+            }
             if bgTaskID != .invalid {
                 UIApplication.shared.endBackgroundTask(bgTaskID)
                 bgTaskID = .invalid
@@ -264,9 +295,20 @@ final class CompressionSession: ObservableObject {
         )
     }
 
+    /// 取消任务。【稳定性】幂等 + 协作式取消：
+    /// - 只置取消标志，由编码泵自然退出后走统一收尾（删除本次临时输出）。
+    /// - 不使用 runTask?.cancel()：那会强制中断 Task，与"泵内仍在写文件"并发，
+    ///   导致取消后访问已释放对象 / 删错文件（历史闪退根因）。
+    /// - 已处于终态或正在取消时直接忽略，保证只有一个终态生效。
     func cancel() {
-        AppLog.compress("用户取消任务")
+        let inTerminal = (phase == .completed || phase == .cancelled || phase == .idle)
+        guard !inTerminal, !isCancelling else {
+            AppLog.compress("取消请求被忽略（已终态或正在取消）：phase=\(phase.rawValue)")
+            return
+        }
+        isCancelling = true
+        AppLog.compress("[Task \(currentRunID.uuidString.prefix(8))] 收到取消请求：协作式等待编码泵退出，不强制中断 Task")
         service.cancel()
-        runTask?.cancel()
+        // 正在等待 Photos 保存的任务不再强行中断：保存成功即保留成品，取消只影响未完成部分
     }
 }

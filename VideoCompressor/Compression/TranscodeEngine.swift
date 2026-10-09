@@ -230,9 +230,14 @@ struct TranscodeEngine {
 
         var encodingError: Error?
 
-        let videoPump = Task {
+        // 【稳定性-卡死/取消闪退根因】原为 Task {}：从 @MainActor 调用链继承 MainActor，
+        // 逐帧解码/append + 每帧一次主线程进度回调把主线程打满 → UI 看似卡死、
+        // 取消时大量回调与 UI 重建竞争出现 EXC_BAD_ACCESS。改为后台执行器（不继承 actor）。
+        let videoPump = Task.detached {
             var lastEmitted: CMTime = .invalid
             var emitted = 0
+            var lastReportedFrac: Double = 0
+            var lastReportUptime: UInt64 = DispatchTime.now().uptimeNanoseconds
             while true {
                 if isCancelled?() == true { break }
                 guard let sample = videoOutput.copyNextSampleBuffer() else { break }  // 正常结束
@@ -249,8 +254,14 @@ struct TranscodeEngine {
                 if videoInput.append(sample) {
                     lastEmitted = pts
                     emitted += 1
-                    if duration > 0 {
-                        progress?(min(max(CMTimeGetSeconds(pts) / duration, 0), 1))
+                    // 【稳定性】进度节流：原为逐帧回调（60s 视频约 1800 次主线程任务），
+                    // 改为最多每 100ms / 每 1% 上报一次，避免主线程任务风暴。
+                    let frac = duration > 0 ? min(max(CMTimeGetSeconds(pts) / duration, 0), 1) : 0
+                    let nowUptime = DispatchTime.now().uptimeNanoseconds
+                    if frac - lastReportedFrac >= 0.01 || nowUptime - lastReportUptime >= 100_000_000 {
+                        lastReportedFrac = frac
+                        lastReportUptime = nowUptime
+                        progress?(frac)
                     }
                 } else {
                     AppLog.compress("[ERROR] video append 失败（writer 状态：\(writer.status.rawValue)）：\(writer.error?.localizedDescription ?? "无")")
@@ -262,7 +273,7 @@ struct TranscodeEngine {
             AppLog.compress("视频泵结束：已写入 \(emitted) 帧")
         }
 
-        let audioPump = Task {
+        let audioPump = Task.detached {
             guard let audioInput = audioInput, let audioOutput = audioOutput else { return }
             var appended = 0
             while true {
@@ -284,6 +295,10 @@ struct TranscodeEngine {
         await videoPump.value
         await audioPump.value
 
+        // 【稳定性】编码阶段结束、开始写盘收尾：给 UI 一个明确的阶段信号，
+        // 避免"进度 100% 但长时间不动"的卡死观感。
+        progress?(-1)
+
         // MARK: - 收尾（严格顺序：markAsFinished 已由泵执行 → finishWriting → 校验状态）
 
         if isCancelled?() == true && writer.status == .writing {
@@ -292,8 +307,9 @@ struct TranscodeEngine {
         await writer.finishWriting()
 
         if isCancelled?() == true {
+            // 取消收尾：只删除本次任务的临时输出，绝不触碰原视频或已保存成品
             try? FileManager.default.removeItem(at: outputURL)
-            AppLog.compress("编码已取消，临时产物已清理")
+            AppLog.compress("[Cancel] 编码已取消：临时输出已清理（\((outputURL.lastPathComponent))）")
             throw AppError.userCancelled
         }
         guard writer.status == .completed else {

@@ -5,6 +5,10 @@ import Foundation
 enum TaskStatus {
     case pending
     case compressing(progress: Double)
+    /// 编码帧已写完，正在结束编码与写入文件（progress 到达 100% 之后的真实阶段）。
+    case finalizing
+    /// 正在验证输出文件（存在性、大小、可读取、比例）。
+    case validating
     /// 编码完成，正在保存到照片图库（用户可见的中间阶段，防止"卡死"错觉）。
     case saving
     case success(CompressionResult)
@@ -25,6 +29,14 @@ enum TaskStatus {
         return false
     }
 
+    /// 编码结束后的收尾阶段（写盘 / 验证 / 保存）。
+    var isFinalizing: Bool {
+        switch self {
+        case .finalizing, .validating, .saving: return true
+        default: return false
+        }
+    }
+
     var isPending: Bool {
         if case .pending = self { return true }
         return false
@@ -42,6 +54,8 @@ enum TaskStatus {
         switch self {
         case .pending:           return "等待中"
         case .compressing:       return "压缩中"
+        case .finalizing:        return "正在完成编码与写入…"
+        case .validating:        return "正在验证输出…"
         case .saving:            return "保存到照片…"
         case .success:           return "已完成"
         case .noGain:            return "未节省空间"
