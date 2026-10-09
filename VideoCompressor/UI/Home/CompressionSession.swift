@@ -307,7 +307,7 @@ final class CompressionSession: ObservableObject {
     func cancel() {
         let inTerminal = (phase == .completed || phase == .cancelled || phase == .idle)
         guard !inTerminal, !isCancelling else {
-            AppLog.compress("取消请求被忽略（已终态或正在取消）：phase=\(phase.rawValue)")
+            AppLog.compress("取消请求被忽略（已终态或正在取消）：phase=\(String(describing: phase))")
             return
         }
         isCancelling = true
